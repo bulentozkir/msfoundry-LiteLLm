@@ -1,0 +1,7 @@
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\publish\ChatClient2.exe
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\publish\appsettings.Development.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\publish\appsettings.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\publish\ChatClient2.dll
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\publish\ChatClient2.deps.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\publish\ChatClient2.runtimeconfig.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\publish\ChatClient2.pdb

@@ -1,0 +1,14 @@
+model_list:
+  - model_name: ${model_alias}
+    litellm_params:
+      model: azure/${deployment_name}
+      api_base: os.environ/AZURE_API_BASE
+      api_version: os.environ/AZURE_API_VERSION
+
+# No api_key: authenticates via the Container App's user-assigned managed identity
+# (DefaultAzureCredential -> ManagedIdentityCredential, scoped by AZURE_CLIENT_ID).
+litellm_settings:
+  enable_azure_ad_token_refresh: true
+
+general_settings:
+  database_url: os.environ/DATABASE_URL

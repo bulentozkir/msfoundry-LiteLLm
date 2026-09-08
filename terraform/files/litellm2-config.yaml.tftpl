@@ -1,0 +1,16 @@
+model_list:
+  - model_name: ${model_alias}
+    litellm_params:
+      model: azure/${deployment_name}
+      api_base: os.environ/AZURE_API_BASE
+      api_version: os.environ/AZURE_API_VERSION
+
+# No api_key: disableLocalAuth policy blocks API keys tenant-wide, so this
+# leg authenticates via the Container App's user-assigned managed identity,
+# same as litellm-config.yaml.tftpl. The client -> LiteLLM2 leg is unaffected
+# and still uses the plain master key (see litellm2.tf).
+litellm_settings:
+  enable_azure_ad_token_refresh: true
+
+general_settings:
+  database_url: os.environ/DATABASE_URL

@@ -1,0 +1,144 @@
+[0m[1mrandom_string.suffix: Refreshing state... [id=ntzf8l][0m
+[0m[1mrandom_password.postgres_admin_password: Refreshing state... [id=none][0m
+[0m[1mrandom_password.litellm_master_key: Refreshing state... [id=none][0m
+[0m[1mrandom_password.litellm2_master_key: Refreshing state... [id=none][0m
+[0m[1mdata.azurerm_client_config.current: Reading...[0m[0m
+[0m[1mdata.azurerm_network_service_tags.frontdoor_backend: Reading...[0m[0m
+[0m[1mazurerm_resource_group.main: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test][0m
+[0m[1mdata.azurerm_client_config.current: Read complete after 0s [id=Y2xpZW50Q29uZmlncy9jbGllbnRJZD0wNGIwNzc5NS04ZGRiLTQ2MWEtYmJlZS0wMmY5ZTFiZjdiNDY7b2JqZWN0SWQ9YmUxMjc5YmItM2ZjYy00MzVhLWI4OGEtMDQ0MmZkYjcwNmFiO3N1YnNjcmlwdGlvbklkPTQ0ZDNlNWQ4LTIzYmMtNDUxNy1hNjgwLWYyZDYzNTlkZDUxNjt0ZW5hbnRJZD04Zjc0MDg5Ni0xYzQzLTRhMGQtYWFjYi0xZWMwOGNjZjgyZDU=][0m
+[0m[1mazurerm_log_analytics_workspace.main: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.OperationalInsights/workspaces/log-litellm-ntzf8l][0m
+[0m[1mazurerm_private_dns_zone.app_service: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.azurewebsites.net][0m
+[0m[1mazurerm_service_plan.chat_client: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Web/serverFarms/asp-litellm-chat-ntzf8l][0m
+[0m[1mazurerm_user_assigned_identity.litellm: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-litellm-ntzf8l][0m
+[0m[1mazurerm_private_dns_zone.postgres: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.postgres.database.azure.com][0m
+[0m[1mazurerm_private_dns_zone.foundry["privatelink.openai.azure.com"]: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.openai.azure.com][0m
+[0m[1mazurerm_private_dns_zone.foundry["privatelink.cognitiveservices.azure.com"]: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.cognitiveservices.azure.com][0m
+[0m[1mazurerm_private_dns_zone.foundry["privatelink.services.ai.azure.com"]: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.services.ai.azure.com][0m
+[0m[1mazurerm_virtual_network.main: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/virtualNetworks/vnet-litellm-ntzf8l][0m
+[0m[1mazurerm_cdn_frontdoor_profile.main: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l][0m
+[0m[1mdata.azurerm_network_service_tags.frontdoor_backend: Read complete after 6s [id=northcentralus-AzureFrontDoor.Backend][0m
+[0m[1mazurerm_role_assignment.litellm_cognitive_services_openai_user: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-foundry-litellm-test/providers/Microsoft.CognitiveServices/accounts/fdry-litellm-vemyrs/providers/Microsoft.Authorization/roleAssignments/683527ef-904d-3e83-061a-48786eecd6b8][0m
+[0m[1mazurerm_subnet.aca: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/virtualNetworks/vnet-litellm-ntzf8l/subnets/snet-aca][0m
+[0m[1mazurerm_subnet.appsvc: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/virtualNetworks/vnet-litellm-ntzf8l/subnets/snet-appsvc][0m
+[0m[1mazurerm_subnet.postgres: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/virtualNetworks/vnet-litellm-ntzf8l/subnets/snet-postgres][0m
+[0m[1mazurerm_subnet.pe: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/virtualNetworks/vnet-litellm-ntzf8l/subnets/snet-pe][0m
+[0m[1mazurerm_cdn_frontdoor_origin_group.litellm: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/originGroups/og-litellm][0m
+[0m[1mazurerm_cdn_frontdoor_origin_group.chat_client2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/originGroups/og-chat-client2][0m
+[0m[1mazurerm_cdn_frontdoor_endpoint.litellm_admin: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/afdEndpoints/fde-litellm-ntzf8l][0m
+[0m[1mazurerm_cdn_frontdoor_endpoint.litellm2_admin: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/afdEndpoints/fde-litellm2-ntzf8l][0m
+[0m[1mazurerm_cdn_frontdoor_endpoint.chat_client2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/afdEndpoints/fde-chat2-ntzf8l][0m
+[0m[1mazurerm_cdn_frontdoor_origin_group.litellm2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/originGroups/og-litellm2][0m
+[0m[1mazurerm_container_app_environment.main: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.App/managedEnvironments/cae-litellm-ntzf8l][0m
+[0m[1mazurerm_private_dns_zone_virtual_network_link.foundry["privatelink.services.ai.azure.com"]: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.services.ai.azure.com/virtualNetworkLinks/link-privatelink-services-ai-azure-com][0m
+[0m[1mazurerm_private_dns_zone_virtual_network_link.foundry["privatelink.openai.azure.com"]: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.openai.azure.com/virtualNetworkLinks/link-privatelink-openai-azure-com][0m
+[0m[1mazurerm_private_dns_zone_virtual_network_link.foundry["privatelink.cognitiveservices.azure.com"]: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.cognitiveservices.azure.com/virtualNetworkLinks/link-privatelink-cognitiveservices-azure-com][0m
+[0m[1mazurerm_private_dns_zone_virtual_network_link.postgres: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.postgres.database.azure.com/virtualNetworkLinks/link-postgres][0m
+[0m[1mazurerm_private_dns_zone_virtual_network_link.app_service: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/privatelink.azurewebsites.net/virtualNetworkLinks/link-appsvc][0m
+[0m[1mazurerm_private_endpoint.foundry: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateEndpoints/pe-foundry-litellm][0m
+[0m[1mtime_sleep.wait_for_rbac: Refreshing state... [id=2026-09-07T19:31:30Z][0m
+[0m[1mazurerm_postgresql_flexible_server.litellm: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-litellm-ntzf8l][0m
+[0m[1mazurerm_private_dns_zone.aca_internal: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/proudfield-59f40110.northcentralus.azurecontainerapps.io][0m
+[0m[1mazurerm_postgresql_flexible_server_database.litellm: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.DBforPostgreSQL/flexibleServers/psql-litellm-ntzf8l/databases/litellm][0m
+[0m[1mazurerm_container_app.litellm: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.App/containerApps/ca-litellm][0m
+[0m[1mazurerm_container_app.litellm2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.App/containerApps/ca-litellm2][0m
+[0m[1mnull_resource.foundry_disable_public_access: Refreshing state... [id=5441072472793374772][0m
+[0m[1mazurerm_private_dns_zone_virtual_network_link.aca_internal: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/proudfield-59f40110.northcentralus.azurecontainerapps.io/virtualNetworkLinks/link-aca-internal][0m
+[0m[1mazurerm_private_dns_a_record.aca_internal_wildcard: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateDnsZones/proudfield-59f40110.northcentralus.azurecontainerapps.io/A/*][0m
+[0m[1mazurerm_cdn_frontdoor_origin.litellm: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/originGroups/og-litellm/origins/origin-litellm][0m
+[0m[1mazurerm_cdn_frontdoor_origin.litellm2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/originGroups/og-litellm2/origins/origin-litellm2][0m
+[0m[1mazurerm_linux_web_app.chat_client2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Web/sites/litellm-chat2-ntzf8l][0m
+[0m[1mazurerm_cdn_frontdoor_route.litellm: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/afdEndpoints/fde-litellm-ntzf8l/routes/route-litellm][0m
+[0m[1mazurerm_cdn_frontdoor_route.litellm2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/afdEndpoints/fde-litellm2-ntzf8l/routes/route-litellm2][0m
+[0m[1mazurerm_cdn_frontdoor_origin.chat_client2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/originGroups/og-chat-client2/origins/origin-chat-client2][0m
+[0m[1mazurerm_private_endpoint.chat_client2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Network/privateEndpoints/pe-litellm-chat2-ntzf8l][0m
+[0m[1mazurerm_cdn_frontdoor_route.chat_client2: Refreshing state... [id=/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.Cdn/profiles/afd-litellm-ntzf8l/afdEndpoints/fde-chat2-ntzf8l/routes/route-chat-client2][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [33m~[0m update in-place[0m
+
+Terraform will perform the following actions:
+
+[1m  # azurerm_container_app.litellm[0m will be updated in-place
+[0m  [33m~[0m[0m resource "azurerm_container_app" "litellm" {
+        id                            = "/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.App/containerApps/ca-litellm"
+        name                          = "ca-litellm"
+        tags                          = {
+            "environment" = "test"
+            "managed_by"  = "terraform"
+            "project"     = "msfoundry-litellm"
+        }
+      [31m-[0m[0m workload_profile_name         = "Consumption" [90m-> null[0m[0m
+        [90m# (9 unchanged attributes hidden)[0m[0m
+
+      [33m~[0m[0m ingress {
+            [90m# (8 unchanged attributes hidden)[0m[0m
+
+          [32m+[0m[0m ip_security_restriction {
+              [32m+[0m[0m action           = "Allow"
+              [32m+[0m[0m description      = "In-VNet callers (e.g. chat-client2's direct calls to LiteLLM, not routed through Front Door)"
+              [32m+[0m[0m ip_address_range = "10.20.0.0/16"
+              [32m+[0m[0m name             = "vnet-internal"
+            }
+
+            [90m# (156 unchanged blocks hidden)[0m[0m
+        }
+
+        [90m# (5 unchanged blocks hidden)[0m[0m
+    }
+
+[1m  # azurerm_container_app.litellm2[0m will be updated in-place
+[0m  [33m~[0m[0m resource "azurerm_container_app" "litellm2" {
+        id                            = "/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.App/containerApps/ca-litellm2"
+        name                          = "ca-litellm2"
+        tags                          = {
+            "environment" = "test"
+            "managed_by"  = "terraform"
+            "project"     = "msfoundry-litellm"
+        }
+      [31m-[0m[0m workload_profile_name         = "Consumption" [90m-> null[0m[0m
+        [90m# (9 unchanged attributes hidden)[0m[0m
+
+      [33m~[0m[0m ingress {
+            [90m# (8 unchanged attributes hidden)[0m[0m
+
+          [32m+[0m[0m ip_security_restriction {
+              [32m+[0m[0m action           = "Allow"
+              [32m+[0m[0m description      = "In-VNet callers (e.g. chat-client2's direct calls to LiteLLM, not routed through Front Door)"
+              [32m+[0m[0m ip_address_range = "10.20.0.0/16"
+              [32m+[0m[0m name             = "vnet-internal"
+            }
+
+            [90m# (156 unchanged blocks hidden)[0m[0m
+        }
+
+        [90m# (5 unchanged blocks hidden)[0m[0m
+    }
+
+[1m  # azurerm_container_app_environment.main[0m will be updated in-place
+[0m  [33m~[0m[0m resource "azurerm_container_app_environment" "main" {
+        id                                          = "/subscriptions/44d3e5d8-23bc-4517-a680-f2d6359dd516/resourceGroups/rg-litellm-foundry-test/providers/Microsoft.App/managedEnvironments/cae-litellm-ntzf8l"
+        name                                        = "cae-litellm-ntzf8l"
+        tags                                        = {
+            "environment" = "test"
+            "managed_by"  = "terraform"
+            "project"     = "msfoundry-litellm"
+        }
+        [90m# (17 unchanged attributes hidden)[0m[0m
+
+      [31m-[0m[0m workload_profile {
+          [31m-[0m[0m maximum_count         = 0 [90m-> null[0m[0m
+          [31m-[0m[0m minimum_count         = 0 [90m-> null[0m[0m
+          [31m-[0m[0m name                  = "Consumption" [90m-> null[0m[0m
+          [31m-[0m[0m workload_profile_type = "Consumption" [90m-> null[0m[0m
+        }
+    }
+
+[1mPlan:[0m [0m0 to add, 3 to change, 0 to destroy.
+[90m
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ[0m
+
+Saved the plan to: tfplan-vnet-allow
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "tfplan-vnet-allow"

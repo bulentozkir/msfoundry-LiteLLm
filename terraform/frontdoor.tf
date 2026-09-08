@@ -98,10 +98,10 @@ resource "azurerm_cdn_frontdoor_origin_group" "litellm" {
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
 
   health_probe {
-    path                = "/"
+    path                = "/health/readiness"
     protocol            = "Https"
-    request_type        = "HEAD"
-    interval_in_seconds = 100
+    request_type        = "GET"
+    interval_in_seconds = 30
   }
 
   load_balancing {
@@ -129,6 +129,7 @@ resource "azurerm_cdn_frontdoor_route" "litellm" {
   cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.litellm_admin.id
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.litellm.id
   cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.litellm.id]
+  cdn_frontdoor_rule_set_ids    = [azurerm_cdn_frontdoor_rule_set.litellm_ui.id]
 
   supported_protocols    = ["Http", "Https"]
   patterns_to_match      = ["/*"]
@@ -148,10 +149,10 @@ resource "azurerm_cdn_frontdoor_origin_group" "litellm2" {
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
 
   health_probe {
-    path                = "/"
+    path                = "/health/readiness"
     protocol            = "Https"
-    request_type        = "HEAD"
-    interval_in_seconds = 100
+    request_type        = "GET"
+    interval_in_seconds = 30
   }
 
   load_balancing {
@@ -179,6 +180,7 @@ resource "azurerm_cdn_frontdoor_route" "litellm2" {
   cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.litellm2_admin.id
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.litellm2.id
   cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.litellm2.id]
+  cdn_frontdoor_rule_set_ids    = [azurerm_cdn_frontdoor_rule_set.litellm_ui.id]
 
   supported_protocols    = ["Http", "Https"]
   patterns_to_match      = ["/*"]
@@ -187,13 +189,44 @@ resource "azurerm_cdn_frontdoor_route" "litellm2" {
   link_to_default_domain = true
 }
 
+# LiteLLM emits an absolute redirect to its Container Apps origin when `/ui`
+# is missing the trailing slash. Handle that canonical redirect at the edge so
+# browsers never leave the Front Door hostname (the direct origin is blocked).
+resource "azurerm_cdn_frontdoor_rule_set" "litellm_ui" {
+  name                     = "LiteLLMUI"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+}
+
+resource "azurerm_cdn_frontdoor_rule" "litellm_ui_trailing_slash" {
+  name                      = "RedirectUIWithTrailingSlash"
+  cdn_frontdoor_rule_set_id = azurerm_cdn_frontdoor_rule_set.litellm_ui.id
+  order                     = 1
+  behaviour_on_match        = "Stop"
+
+  conditions {
+    request_path {
+      operator = "Equal"
+      # Front Door URL path conditions omit the leading slash.
+      values   = ["ui"]
+    }
+  }
+
+  actions {
+    url_redirect {
+      redirect_type     = "Found"
+      redirect_protocol = "Https"
+      destination_path  = "/ui/"
+    }
+  }
+}
+
 output "litellm_admin_ui_url" {
   description = "LiteLLM Admin UI (ca-litellm) via Front Door. Log in with UI_USERNAME/UI_PASSWORD (aiadmin)."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm_admin.host_name}/ui"
+  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm_admin.host_name}/ui/"
 }
 
 output "litellm2_admin_ui_url" {
   description = "LiteLLM Admin UI (ca-litellm2 / chat2's backend) via Front Door. Log in with UI_USERNAME/UI_PASSWORD (aiadmin)."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/ui"
+  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/ui/"
 }
 

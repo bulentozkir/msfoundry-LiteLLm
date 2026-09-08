@@ -48,7 +48,7 @@ variable "litellm_image" {
 variable "litellm_container_cpu" {
   description = "vCPU allocated to the LiteLLM container (must pair with a valid Container Apps Consumption cpu/memory combo)."
   type        = number
-  default     = 0.5
+  default     = 1
 }
 
 variable "litellm_min_replicas" {
@@ -72,7 +72,7 @@ variable "litellm_scale_concurrent_requests" {
 variable "litellm_container_memory" {
   description = "Memory allocated to the LiteLLM container (must pair with litellm_container_cpu per Container Apps Consumption allocation rules)."
   type        = string
-  default     = "1Gi"
+  default     = "2Gi"
 }
 
 variable "litellm_model_alias" {

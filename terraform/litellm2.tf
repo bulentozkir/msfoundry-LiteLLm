@@ -39,8 +39,13 @@ resource "azurerm_container_app" "litellm2" {
   }
 
   secret {
-    name  = "litellm-ui-password"
-    value = var.litellm_ui_password != "" ? var.litellm_ui_password : "not-yet-configured"
+    name  = "redis-password"
+    value = azurerm_managed_redis.litellm.default_database[0].primary_access_key
+  }
+
+  secret {
+    name  = "litellm-ui-password-escaped"
+    value = var.litellm_ui_password != "" ? local.litellm_ui_password_container_value : "not-yet-configured"
   }
 
   template {
@@ -97,13 +102,40 @@ resource "azurerm_container_app" "litellm2" {
       }
 
       env {
+        name  = "REDIS_HOST"
+        value = azurerm_managed_redis.litellm.hostname
+      }
+
+      env {
+        name  = "REDIS_PORT"
+        value = tostring(azurerm_managed_redis.litellm.default_database[0].port)
+      }
+
+      env {
+        name        = "REDIS_PASSWORD"
+        secret_name = "redis-password"
+      }
+
+      env {
+        name  = "REDIS_SSL"
+        value = "True"
+      }
+
+      env {
         name  = "UI_USERNAME"
         value = var.litellm_ui_username
       }
 
+      # Login redirects must target Front Door, not the blocked origin hostname.
+      env {
+        name  = "PROXY_BASE_URL"
+        value = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}"
+      }
+
       env {
         name        = "UI_PASSWORD"
-        secret_name = "litellm-ui-password"
+        # Changing the reference creates a revision that loads the corrected secret.
+        secret_name = "litellm-ui-password-escaped"
       }
     }
   }
@@ -136,7 +168,11 @@ resource "azurerm_container_app" "litellm2" {
     }
   }
 
-  depends_on = [time_sleep.wait_for_rbac]
+  depends_on = [
+    time_sleep.wait_for_rbac,
+    azurerm_private_endpoint.redis,
+    azurerm_private_dns_zone_virtual_network_link.redis,
+  ]
 }
 
 # ---------------------------------------------------------------------------

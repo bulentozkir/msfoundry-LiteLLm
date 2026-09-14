@@ -1,0 +1,32 @@
+# Copy to terraform.tfvars and replace these values. This file has no credentials.
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+deployment = {
+  name                  = "litellm"
+  location              = "northcentralus"
+  # Resolve the actual official release tag to a digest before deploying.
+  image                 = "ghcr.io/berriai/litellm@sha256:REPLACE_WITH_VERIFIED_DIGEST"
+  allowed_ingress_cidrs = ["203.0.113.10/32"] # REPLACE with your egress IP; example address cannot reach the app.
+  revision_suffix       = "initial"
+  postgres_backup_days  = 7 # Native PaaS backup/PITR retention: 7-35 days.
+  model_list            = [] # Add models via Admin UI or configure below.
+  tags                  = { environment = "test", owner = "platform-team" }
+
+  # Optional model-provider configuration (not tied to Azure/Foundry):
+  # provider_environment = { OPENAI_API_BASE = "https://api.openai.com/v1" }
+  # model_list = [{
+  #   model_name = "my-chat-model"
+  #   litellm_params = {
+  #     model    = "openai/YOUR_MODEL_ID"
+  #     api_base = "os.environ/OPENAI_API_BASE"
+  #     api_key  = "os.environ/OPENAI_API_KEY"
+  #   }
+  # }]
+
+  # Low-cost defaults are NOT a highly available production architecture.
+  # redis_high_availability = true
+  # postgres_sku = "GP_Standard_D2s_v3"
+  # postgres_ha_mode = "ZoneRedundant" # Validate region and SKU compatibility first.
+  # min_replicas = 2
+  # private_ingress = true # Requires client connectivity + DNS to this VNet.
+}

@@ -1,0 +1,60 @@
+@model ChatClient2.Pages.ChatPageModel
+@using ChatClient2.Services
+
+<section class="chat-workspace" aria-labelledby="chat-title">
+    <header class="chat-heading">
+        <div>
+            <p class="eyebrow">YOUR AI WORKSPACE · NO SIGN-IN</p>
+            <h1 id="chat-title">@Model.ChatTitle chat</h1>
+            <p class="chat-subtitle">A focused space to ask, explore, and create.</p>
+        </div>
+        <span class="model-badge">@Model.ModelName</span>
+    </header>
+
+    <div class="chat-panel">
+        <div class="chat-toolbar">
+            <span>Conversation <span class="turn-count">@Model.Conversation.Count messages</span></span>
+            <form method="post" asp-page="@Model.PageRoute" asp-page-handler="Clear" data-clear-form>
+                <button class="button button-quiet" type="submit" disabled="@(Model.Conversation.Count == 0)">Clear conversation</button>
+            </form>
+        </div>
+
+        <div class="conversation" id="conversation" role="region" aria-label="Conversation history" tabindex="0">
+            @if (Model.Conversation.Count == 0)
+            {
+                <div class="empty-state">
+                    <span class="empty-symbol" aria-hidden="true">✦</span>
+                    <h2>What would you like to work on?</h2>
+                    <p>Ask a question, untangle an idea, or start with a draft.</p>
+                    <p class="empty-note">Mini and Phi keep separate conversations.</p>
+                </div>
+            }
+            @foreach (var turn in Model.Conversation)
+            {
+                <article class="chat-message @(turn.Role == "user" ? "message-user" : "message-assistant")">
+                    <h2 class="message-author">@(turn.Role == "user" ? "You" : Model.ChatTitle)</h2>
+                    <div class="message-content">@turn.Content</div>
+                </article>
+            }
+        </div>
+
+        <div class="composer">
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="chat-error" role="alert">@Model.ErrorMessage</div>
+            }
+            <form method="post" asp-page="@Model.PageRoute" data-chat-form>
+                <label asp-for="Message">Message @Model.ChatTitle</label>
+                <textarea asp-for="Message" rows="3" maxlength="@MlflowChatService.MaxMessageLength"
+                          placeholder="Type your message…" required aria-describedby="message-help message-validation"></textarea>
+                <span asp-validation-for="Message" id="message-validation" class="validation-message" role="alert"></span>
+                <div class="composer-actions">
+                    <span id="message-help">Up to 8,000 characters · Ctrl/⌘ + Enter to send</span>
+                    <button type="submit" class="button button-primary" data-send-button>Send message <span aria-hidden="true">↗</span></button>
+                </div>
+                <p class="send-status" role="status" aria-live="polite" data-send-status></p>
+            </form>
+        </div>
+    </div>
+    <p class="chat-footnote">Replies may be inaccurate. Avoid sharing sensitive information. Recent history only; sessions expire after 30 minutes of inactivity.</p>
+</section>

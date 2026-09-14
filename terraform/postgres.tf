@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------------
-# Postgres for LiteLLM's Admin UI + spend/token-usage tracking (per-key, i.e.
-# per-app since ca-litellm and ca-litellm2 each use a distinct master key).
+# Postgres, reused as-is for the MLflow gateway's backend store (tracking
+# metadata - see mlflow-gateway.tf for the mlflow database on this same
+# server). The old litellm database is dropped; nothing else read it.
 # Cheapest viable SKU (Burstable B1ms, 32GB min storage) - this is a test/demo
 # environment, not production. VNet-integrated (delegated subnet + private
 # DNS zone) to match the rest of the stack's private-only access model - no
@@ -39,7 +40,7 @@ resource "random_password" "postgres_admin_password" {
   special = false
 }
 
-resource "azurerm_postgresql_flexible_server" "litellm" {
+resource "azurerm_postgresql_flexible_server" "mlflow" {
   name                = "psql-${var.project_name}-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
@@ -59,16 +60,12 @@ resource "azurerm_postgresql_flexible_server" "litellm" {
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
 }
 
-resource "azurerm_postgresql_flexible_server_database" "litellm" {
-  name      = "litellm"
-  server_id = azurerm_postgresql_flexible_server.litellm.id
-}
-
-locals {
-  litellm_database_url = "postgresql://${azurerm_postgresql_flexible_server.litellm.administrator_login}:${random_password.postgres_admin_password.result}@${azurerm_postgresql_flexible_server.litellm.fqdn}:5432/${azurerm_postgresql_flexible_server_database.litellm.name}?sslmode=require"
+moved {
+  from = azurerm_postgresql_flexible_server.litellm
+  to   = azurerm_postgresql_flexible_server.mlflow
 }
 
 output "postgres_server_fqdn" {
-  description = "Private FQDN of the LiteLLM Postgres server (resolvable only from inside the VNet)."
-  value       = azurerm_postgresql_flexible_server.litellm.fqdn
+  description = "Private FQDN of the shared Postgres server (resolvable only from inside the VNet)."
+  value       = azurerm_postgresql_flexible_server.mlflow.fqdn
 }

@@ -21,9 +21,7 @@ C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\rjsmcshtml.dswa.ca
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\scopedcss\Pages\Shared\_Layout.cshtml.rz.scp.css
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\scopedcss\bundle\ChatClient2.styles.css
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\scopedcss\projectbundle\ChatClient2.bundle.scp.css
-C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\xwykj6d3rj-{0}-b9sayid5wm-b9sayid5wm.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\g65ihcwny1-{0}-61n19gt1b8-61n19gt1b8.gz
-C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\ofb0jrlldy-{0}-xtxxf3hu2r-xtxxf3hu2r.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\tx269wmwzf-{0}-bqjiyaj88i-bqjiyaj88i.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\hd4gg7sdnv-{0}-c2jlpeoesf-c2jlpeoesf.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\c7endpd3i5-{0}-erw9l3u2r3-erw9l3u2r3.gz
@@ -83,8 +81,6 @@ C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\gjipk0r
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\tboivpmxbc-{0}-muycvpuwrr-muycvpuwrr.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\nz7froks1c-{0}-87fc7y1x7t-87fc7y1x7t.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\3dwdrbrdjr-{0}-mlv21k5csn-mlv21k5csn.gz
-C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\7y8y9tg8na-{0}-epwpcc22o4-epwpcc22o4.gz
-C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\5glx3a1mie-{0}-epwpcc22o4-epwpcc22o4.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\staticwebassets.build.json
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\staticwebassets.build.json.cache
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\staticwebassets.development.json
@@ -95,3 +91,8 @@ C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\refint\ChatClient2
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\ChatClient2.pdb
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\ChatClient2.genruntimeconfig.cache
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\ref\ChatClient2.dll
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\ChatClient2.sourcelink.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\xwykj6d3rj-{0}-7jmamm97wv-7jmamm97wv.gz
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\ofb0jrlldy-{0}-8s9qhiwq8h-8s9qhiwq8h.gz
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\7y8y9tg8na-{0}-kj0fds24ze-kj0fds24ze.gz
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\5glx3a1mie-{0}-kj0fds24ze-kj0fds24ze.gz

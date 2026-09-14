@@ -1,20 +1,38 @@
+using ChatClient2.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// No Entra ID / auth of any kind - client authenticates to LiteLLM with a
-// plain access key (LiteLLm:ApiKey) instead.
+// The MLflow gateway is now protected by HTTP Basic Auth (mlflow.server.auth -
+// see terraform/mlflow-gateway-app.tf), so this client authenticates its own
+// calls with the same admin credentials rather than relying on network
+// restrictions alone.
 builder.Services.AddRazorPages();
+builder.Services.AddScoped<MlflowChatService>();
 
-builder.Services.AddHttpClient("LiteLLM", client =>
+builder.Services.AddHttpClient("Mlflow", client =>
 {
-    var baseUrl = builder.Configuration["LiteLLm:BaseUrl"]
-        ?? throw new InvalidOperationException("LiteLLm:BaseUrl is not configured.");
+    var baseUrl = builder.Configuration["Mlflow:BaseUrl"]
+        ?? throw new InvalidOperationException("Mlflow:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
-    var apiKey = builder.Configuration["LiteLLm:ApiKey"];
+    client.Timeout = TimeSpan.FromSeconds(25);
+    var apiKey = builder.Configuration["Mlflow:ApiKey"];
     if (!string.IsNullOrEmpty(apiKey))
     {
         client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
     }
+    var adminUsername = builder.Configuration["Mlflow:AdminUsername"];
+    var adminPassword = builder.Configuration["Mlflow:AdminPassword"];
+    if (!string.IsNullOrEmpty(adminUsername) && !string.IsNullOrEmpty(adminPassword))
+    {
+        var basicAuthValue = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes($"{adminUsername}:{adminPassword}"));
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", basicAuthValue);
+    }
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = false
 });
 
 builder.Services.AddDistributedMemoryCache();

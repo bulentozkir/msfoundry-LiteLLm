@@ -11,7 +11,7 @@ azure_openai_deployment_name  = "gpt-5-mini"
 azure_openai_api_version      = "2024-10-21"
 foundry_account_id            = "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account-name>"
 
-litellm_model_alias = "gpt-5-mini"
+mlflow_model_alias = "gpt-5-mini"
 
-litellm_ui_username = "aiadmin"
-litellm_ui_password = ""   # required to log into /ui on either proxy
+mlflow_admin_username = "aiadmin"
+mlflow_admin_password = ""   # required to log into the MLflow gateway UI/API

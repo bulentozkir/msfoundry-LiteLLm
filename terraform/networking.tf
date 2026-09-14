@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
-# VNet + subnets: makes all access to LiteLLM (Container Apps), the chat
-# client (App Service), and Microsoft Foundry private. No component in this
+# VNet + subnets: makes all access to the MLflow gateway (Container Apps), the
+# chat client (App Service), and Microsoft Foundry private. No component in this
 # stack is reachable over the public internet after this file's resources
 # are applied - see README notes on required in-VNet access (VPN/Bastion) for
 # actual end-user use afterward.

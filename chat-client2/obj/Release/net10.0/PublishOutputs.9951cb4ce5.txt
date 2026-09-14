@@ -1,0 +1,13 @@
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\ChatClient2.exe
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\publish\web.config
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\appsettings.Development.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\appsettings.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\publish\appsettings.Development.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\publish\appsettings.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\publish\ChatClient2.deps.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\publish\ChatClient2.runtimeconfig.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\publish\ChatClient2.staticwebassets.endpoints.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\ChatClient2.dll
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\ChatClient2.deps.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\ChatClient2.runtimeconfig.json
+C:\Users\bulento\AppData\Local\Temp\litellm-chat-phi-publish-20260908\ChatClient2.pdb

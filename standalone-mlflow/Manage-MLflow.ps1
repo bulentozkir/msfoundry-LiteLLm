@@ -70,7 +70,7 @@ function Assert-SafePlan {
     }
 }
 
-function Apply-ReviewedPlan {
+function Invoke-ReviewedPlan {
     param([bool]$AllowTemplateChange = $false)
     Invoke-Native terraform @('validate', '-no-color')
     $plan = Join-Path $PSScriptRoot ('operation-' + [guid]::NewGuid().ToString('N') + '.tfplan')
@@ -115,7 +115,7 @@ if (!$settings.ContainsKey('subscription_id') -or !$settings.ContainsKey('deploy
 if ($settings.ContainsKey('provider_secrets')) { throw 'Keep provider_secrets out of the settings file; supply TF_VAR_provider_secrets privately.' }
 
 # WhatIf returns before init, local settings writes, cloud mutation or backup export.
-if (!$PSCmdlet.ShouldProcess($settings.deployment.name, "$Action standalone LiteLLM using $SettingsFile")) { return }
+if (!$PSCmdlet.ShouldProcess($settings.deployment.name, "$Action standalone AI gateway using $SettingsFile")) { return }
 Push-Location $PSScriptRoot
 try {
     Get-Command terraform -ErrorAction Stop | Out-Null
@@ -132,7 +132,7 @@ try {
     $previousSubscription = $env:ARM_SUBSCRIPTION_ID
     $env:ARM_SUBSCRIPTION_ID = $settings.subscription_id
     Invoke-Native terraform @('init', '-input=false')
-    if ($Action -eq 'Deploy') { Apply-ReviewedPlan; return }
+    if ($Action -eq 'Deploy') { Invoke-ReviewedPlan; return }
 
     $script:connection = Invoke-Native terraform @('output', '-json', 'connection') -Capture | ConvertFrom-Json
     $app = Invoke-Native az @('containerapp', 'show', '--name', $connection.container_app_name,
@@ -163,13 +163,13 @@ try {
             # FIRST apply freezes traffic. Never deploy new image while latest=100.
             $settings.deployment.traffic_weights = @{ $StableRevision = 100 }
             Save-Settings
-            Apply-ReviewedPlan
+            Invoke-ReviewedPlan
             # SECOND apply creates candidate; migrations are disabled in serving pods.
             $settings.deployment.image = $Image
             $settings.deployment.revision_suffix = $RevisionSuffix
             $settings.deployment.disable_schema_update = $true
             Save-Settings
-            Apply-ReviewedPlan -AllowTemplateChange $true
+            Invoke-ReviewedPlan -AllowTemplateChange $true
             Write-Host "Candidate staged with production traffic pinned to $StableRevision."
             Write-Host "Candidate: $CandidateRevision. Run direct revision health/Redis/model/streaming tests before Promote."
         }
@@ -188,7 +188,7 @@ try {
             # Keep the latest template/image in Terraform; rollback changes only
             # routing. Reverting revision_suffix to an old immutable revision fails.
             Save-Settings
-            Apply-ReviewedPlan
+            Invoke-ReviewedPlan
         }
         'BackupStatus' {
             Invoke-Native az @('postgres', 'flexible-server', 'show', '--name', $connection.postgres_server_name,

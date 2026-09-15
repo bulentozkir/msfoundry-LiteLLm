@@ -1,8 +1,8 @@
-# Standalone LiteLLM on Azure: administrator guide
+# Standalone AI Gateway on Azure: administrator guide for standalone-mlflow
 
-This package deploys **one independent LiteLLM platform**. It does not reference this repository's demo resources, Foundry, chat apps, Front Door, or their Terraform state. Copy this whole directory to deploy it elsewhere. It is Azure-specific infrastructure, but **LLM-provider-agnostic**.
+This package deploys **one independent AI gateway platform**. In the current implementation, the gateway runtime is LiteLLM. It does not reference this repository's demo resources, Foundry, chat apps, Front Door, or their Terraform state. Copy this whole directory to deploy it elsewhere. It is Azure-specific infrastructure, but **LLM-provider-agnostic**.
 
-An authorized administrator supplies five deployment values once: subscription, short name, region, pinned image, and permitted client CIDRs. Subsequent operations use the same settings file plus a few action parameters. An Azure subscription with permissions, supported regional SKUs/quota, reachable model endpoints, and model credentials are still prerequisites—not resources that Terraform can eliminate.
+An authorized administrator supplies core deployment values once. Subsequent operations use the same settings file plus a few action parameters. An Azure subscription with permissions, supported regional SKUs/quota, reachable model endpoints, and model credentials are still prerequisites, not resources that Terraform can eliminate.
 
 ## Resources, briefly
 
@@ -20,11 +20,16 @@ An authorized administrator supplies five deployment values once: subscription, 
 | Log Analytics | Container platform/application logs, 30-day retention |
 | Generated credentials | Separate master key, local admin password, database password and durable encryption salt |
 
+### PostgreSQL and Redis roles in production
+
+- PostgreSQL is the persistent system of record for proxy configuration, authentication data, virtual keys, user/team access records, spend tracking, and compliance-oriented audit logs.
+- Redis is the high-throughput memory layer for response caching, distributed rate-limit counters, and short-lived session or coordination state across horizontal proxy replicas.
+
 **Cost profile, not an HA production claim:** PostgreSQL B1ms and non-HA Redis are economical defaults. Keep at least two warm replicas, size PostgreSQL for both revisions' maximum pools, enable suitable PostgreSQL/Redis HA, and assess ACA zone redundancy before a production SLA commitment. This module does not currently expose ACA zone redundancy. Multiple active revisions cost more. Redis state can be lost; PostgreSQL is the durable record. Response caching is disabled (`supported_call_types=[]`), while Redis supports shared coordination. Do not depend on this low-cost topology for strict fault-tolerant budget enforcement.
 
 ## 1. Prerequisites
 
-- Terraform **1.9+**, below 2.0; PowerShell **7.2+** for the admin wrapper; current Azure CLI with Container Apps commands. Validation here used AzureRM **5.4.0** and Random **3.9.0**. Keep the generated provider lock file with the package.
+- Terraform **1.9+**, below 2.0; PowerShell **7.2+** for the admin wrapper; current Azure CLI with Container Apps commands. Validation here used AzureRM **5.5.0** and Random **3.9.1**. Keep the generated provider lock file with the package.
 - Azure sign-in to the **customer's** tenant/subscription. Contributor-like resource creation rights at subscription scope are needed because the package creates a resource group. Identity creation/assignment permissions are also needed. Model RBAC, if desired, needs separate role-assignment rights.
 - A subscription administrator must register `Microsoft.App`, `Microsoft.OperationalInsights`, `Microsoft.Network`, `Microsoft.DBforPostgreSQL`, `Microsoft.Cache`, and `Microsoft.ManagedIdentity`. The provider deliberately does not register services silently. Check regional B0, PostgreSQL and ACA quota/availability and subscription policy before deployment.
 - Choose unused VNet space. Default is `10.80.0.0/16`; it must not overlap networks you later peer. This version creates a new VNet; it does not attach to an existing platform VNet or create peering/VPN/Firewall.
@@ -50,12 +55,12 @@ Work in this standalone directory, **not** in the sibling demo's Terraform direc
 Copy-Item ./admin.tfvars.json.example ./admin.tfvars.json
 ```
 
-Edit the five placeholders. The documentation-only CIDR `203.0.113.10/32` must be replaced with your actual corporate/client egress CIDR. Include all legitimate API clients, not just the admin laptop. `/0` is rejected. Keep the image's full `@sha256:...` reference from an approved release manifest. No particular future release is assumed to exist.
+Edit the placeholders in `admin.tfvars.json`. The documentation-only CIDR `203.0.113.10/32` must be replaced with your actual corporate/client egress CIDR. Include all legitimate API clients, not just the admin laptop. `/0` is rejected. Keep the image's full `@sha256:...` reference from an approved release manifest. No particular future release is assumed to exist. If this deployment will proxy Microsoft Foundry models, set top-level `foundry_account_id` so Terraform grants the gateway managed identity both required roles automatically.
 
 ```powershell
-./Manage-LiteLLM.ps1 -Action Validate
-./Manage-LiteLLM.ps1 -Action Deploy
-./Manage-LiteLLM.ps1 -Action Status
+./Manage-MLflow.ps1 -Action Validate
+./Manage-MLflow.ps1 -Action Deploy
+./Manage-MLflow.ps1 -Action Status
 ```
 
 The wrapper initializes Terraform, validates, saves a plan, rejects incomplete/destructive plans, and requires typing **APPLY** before applying. A saved plan is not automatically safe merely because Terraform produced it. Review the full plan. A failed/cancelled operation leaves desired settings saved so you can inspect/retry; it does not claim Azure is up to date. `-WhatIf` reports intent only, without initialization, writes or cloud operations; it is **not** a deployability check.
@@ -97,7 +102,7 @@ An empty model list boots the platform for administration; inference needs a rea
 
 Have your secret manager set `TF_VAR_provider_secrets` to a JSON map such as `{"OPENAI_API_KEY":"<secret>"}` **without logging its value**. The module converts these to ACA secret references. Never put literal API keys in `model_list` or `provider_environment`; both are nonsecret configuration and appear in plans. Base64 config encoding only avoids shell substitution—it is not encryption.
 
-Azure/Foundry is optional: use an `azure/<deployment-name>` model, your endpoint/API version via provider environment, and grant the output managed-identity principal the narrowly scoped required model-service role. The deployment does not provision a Foundry account or grant cross-resource permissions. Private model endpoints need customer DNS/network integration.
+Azure/Foundry is optional: use an `azure/<deployment-name>` model, your endpoint/API version via provider environment, and grant the output managed-identity principal the narrowly scoped required model-service role. In this root, setting `foundry_account_id` creates both role assignments automatically (`Cognitive Services OpenAI User` and `Cognitive Services User`) for Mini/Phi dual routing. The deployment does not provision a Foundry account. Private model endpoints still need customer DNS/network integration.
 
 **Terraform state and saved plans contain secrets even when marked sensitive.** Credentials are not stored in Key Vault by this package. Restrict state/backups, avoid debug/TRACE logs, and never commit private settings or state. Keep `LITELLM_SALT_KEY` stable forever unless following LiteLLM's supported re-encryption process; losing/changing it makes saved model credentials unreadable. Do not rotate shared secrets during an image canary: ACA secrets are application-scoped, not isolated by revision.
 
@@ -106,8 +111,8 @@ Azure/Foundry is optional: use an `azure/<deployment-name>` model, your endpoint
 Copy the module folder to your repository and call it with the same `deployment` object:
 
 ```hcl
-module "litellm" {
-  source           = "./modules/litellm"
+module "mlflow" {
+  source           = "./modules/mlflow"
   settings         = var.deployment
   provider_secrets = var.provider_secrets
   providers        = { azurerm = azurerm, random = random }
@@ -129,7 +134,7 @@ PostgreSQL enables automated snapshots and WAL-based point-in-time recovery. `po
 Set `deployment.postgres_backup_days` to an integer from 7 to 35 in your settings and apply through `Deploy`. Azure then manages the backups without daily administrator actions. Backups are encrypted by the managed service. This package uses local backup redundancy; it does not provision a backup vault, long-term retention or cross-region backup.
 
 ```powershell
-./Manage-LiteLLM.ps1 -Action BackupStatus
+./Manage-MLflow.ps1 -Action BackupStatus
 ```
 
 This is a read-only control-plane check of server state and backup settings; it does not trigger a new snapshot or certify recoverability. Check the server's **Backup and restore** pane in Azure Portal for available restore points, especially before upgrades.
@@ -165,7 +170,7 @@ Initial bootstrap uses `disable_schema_update=false`, **allowing schema initiali
 ### A. Inspect current deployment
 
 ```powershell
-./Manage-LiteLLM.ps1 -Action Status
+./Manage-MLflow.ps1 -Action Status
 ```
 
 Resolve any drift first; settings must describe the live template. There must be one stable revision at 100%. Keep source/lock files and desired settings under your normal change-control process (without secrets).
@@ -173,7 +178,7 @@ Resolve any drift first; settings must describe the live template. There must be
 ### B. Stage a new image, keeping old traffic at 100%
 
 ```powershell
-./Manage-LiteLLM.ps1 -Action Stage -Image 'ghcr.io/berriai/litellm@sha256:<approved-64-hex-digest>' -RevisionSuffix 'r20260908a' -MigrationReviewed
+./Manage-MLflow.ps1 -Action Stage -Image 'ghcr.io/berriai/litellm@sha256:<approved-64-hex-digest>' -RevisionSuffix 'r20260908a' -MigrationReviewed
 ```
 
 `Stage` performs **two separately reviewed Terraform applies**:
@@ -210,10 +215,10 @@ Supply full revision names from `Status`; keep the old revision active.
 ```powershell
 $stable = '<app-name>--<stable-suffix>'
 $candidate = '<app-name>--r20260908a'
-./Manage-LiteLLM.ps1 -Action Promote -StableRevision $stable -CandidateRevision $candidate -Percent 5 -SmokeTestPassed
+./Manage-MLflow.ps1 -Action Promote -StableRevision $stable -CandidateRevision $candidate -Percent 5 -SmokeTestPassed
 # Observe a representative workload and agreed metrics before each next step.
-./Manage-LiteLLM.ps1 -Action Promote -StableRevision $stable -CandidateRevision $candidate -Percent 50 -SmokeTestPassed
-./Manage-LiteLLM.ps1 -Action Promote -StableRevision $stable -CandidateRevision $candidate -Percent 100 -SmokeTestPassed
+./Manage-MLflow.ps1 -Action Promote -StableRevision $stable -CandidateRevision $candidate -Percent 50 -SmokeTestPassed
+./Manage-MLflow.ps1 -Action Promote -StableRevision $stable -CandidateRevision $candidate -Percent 100 -SmokeTestPassed
 ```
 
 At every step the wrapper checks target revision health and creates a reviewed Terraform plan. The percentages are routing weights, not precise per-user sampling. Traffic changes do not migrate existing streaming connections. Observe at 100% for your agreed rollback window. Wait until old in-flight requests/streams and buffered spend writes finish before deactivation. The 300-second termination grace is only a bounded opportunity to drain; verify actual release shutdown behavior and all client/gateway timeouts under load.
@@ -221,7 +226,7 @@ At every step the wrapper checks target revision health and creates a reviewed T
 ### E. Roll back traffic if required
 
 ```powershell
-./Manage-LiteLLM.ps1 -Action Rollback -StableRevision $stable -CandidateRevision $candidate
+./Manage-MLflow.ps1 -Action Rollback -StableRevision $stable -CandidateRevision $candidate
 ```
 
 This pins 100% to the old healthy revision and 0% to the candidate, persisting the weights in Terraform settings. It intentionally retains the latest template's image/suffix: trying to recreate an old immutable revision by reverting its suffix can fail. Keep the rollback revision warm. If old code cannot read the migrated database, **do not use this as a schema rollback**; invoke the tested recovery/maintenance procedure.

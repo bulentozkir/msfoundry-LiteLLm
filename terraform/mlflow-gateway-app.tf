@@ -245,8 +245,3 @@ resource "azurerm_container_app" "mlflow_gateway" {
     azurerm_private_endpoint.storage_blob,
   ]
 }
-
-output "mlflow_gateway_url" {
-  description = "Public URL of the MLflow AI Gateway through Azure Front Door. The direct Container Apps origin is IP-restricted."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}"
-}

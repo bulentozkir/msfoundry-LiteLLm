@@ -7,11 +7,26 @@ location                     = "northcentralus"
 resource_group_name          = "rg-litellm-foundry-test"
 
 azure_openai_endpoint         = "https://<your-foundry-account>.openai.azure.com"
-azure_openai_deployment_name  = "gpt-5-mini"
+azure_openai_deployment_name  = "gpt-5.4-mini"
 azure_openai_api_version      = "2024-10-21"
 foundry_account_id            = "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account-name>"
 
-mlflow_model_alias = "gpt-5-mini"
+mlflow_model_alias = "gpt-5.4-mini"
 
 mlflow_admin_username = "aiadmin"
 mlflow_admin_password = ""   # required to log into the MLflow gateway UI/API
+
+# Flow 1: Front Door -> chat1 web app -> LiteLLM on its own ACA -> Foundry.
+# Set this to the LiteLLM OpenAI-compatible base URL (typically .../v1).
+litellm_chat1_base_url = "https://<litellm-host>/v1"
+litellm_chat1_api_key  = "" # optional (for LiteLLM bearer auth/virtual keys)
+
+# Optional LiteLLM support resources in this shared stack.
+# Managed Redis defaults to minimum SKU (Balanced_B0).
+litellm_enable_paas_cache         = true
+litellm_redis_sku                 = "Balanced_B0"
+litellm_redis_high_availability   = false
+
+# Keep aliases aligned with the same two Foundry models used by chat2.
+litellm_chat1_model_alias     = "gpt-5.4-mini"
+litellm_chat1_phi_model_alias = "phi-4"

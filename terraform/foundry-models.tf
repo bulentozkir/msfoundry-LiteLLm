@@ -39,8 +39,3 @@ moved {
 locals {
   foundry_model_inference_endpoint = "https://${reverse(split("/", var.foundry_account_id))[0]}.services.ai.azure.com/models"
 }
-
-output "phi_deployment_name" {
-  description = "Phi deployment in the existing Foundry account."
-  value       = azurerm_cognitive_deployment.phi.name
-}

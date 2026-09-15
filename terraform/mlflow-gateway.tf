@@ -70,7 +70,3 @@ locals {
   # deployment_name:model_definition_name:endpoint_name triples for the sidecar.
   mlflow_model_map = "${var.azure_openai_deployment_name}:mini-def:${var.mlflow_model_alias};${azurerm_cognitive_deployment.phi.name}:phi-def:${var.phi_model_alias}"
 }
-
-output "mlflow_acr_login_server" {
-  value = azurerm_container_registry.mlflow.login_server
-}

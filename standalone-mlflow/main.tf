@@ -8,7 +8,7 @@ terraform {
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.6"
+      version = "~> 3.9"
     }
   }
 }
@@ -36,10 +36,30 @@ variable "provider_secrets" {
   default     = {}
 }
 
+variable "foundry_account_id" {
+  description = "Optional ARM resource ID of the Foundry/Cognitive Services account. When set, this root grants the gateway identity both OpenAI and model-inference roles on that account."
+  type        = string
+  default     = null
+}
+
 module "mlflow" {
   source           = "./modules/mlflow"
   settings         = var.deployment
   provider_secrets = var.provider_secrets
+}
+
+resource "azurerm_role_assignment" "gateway_foundry_openai_user" {
+  count                = var.foundry_account_id == null ? 0 : 1
+  scope                = var.foundry_account_id
+  role_definition_name = "Cognitive Services OpenAI User"
+  principal_id         = module.mlflow.connection.identity_principal_id
+}
+
+resource "azurerm_role_assignment" "gateway_foundry_inference_user" {
+  count                = var.foundry_account_id == null ? 0 : 1
+  scope                = var.foundry_account_id
+  role_definition_name = "Cognitive Services User"
+  principal_id         = module.mlflow.connection.identity_principal_id
 }
 
 output "connection" {

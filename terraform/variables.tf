@@ -72,7 +72,7 @@ variable "mlflow_container_memory" {
 variable "mlflow_model_alias" {
   description = "The model name clients call through the MLflow gateway (e.g. 'gpt-5-mini'). Can be any friendly alias."
   type        = string
-  default     = "gpt-5-mini"
+  default     = "gpt-5.4-mini"
 }
 
 # ---- MLflow gateway basic auth (mlflow.server.auth, HTTP Basic) ----
@@ -92,7 +92,7 @@ variable "mlflow_admin_password" {
 # ---- Chat client 2 (access-key only, no Entra ID) ----
 
 variable "chat_client2_app_name" {
-  description = "Globally-unique Azure App Service name for the second (access-key only) chat client."
+  description = "Globally-unique Azure App Service name for chat2 (MLflow-backed web app)."
   type        = string
   default     = "litellm-chat2-ntzf8l"
 }

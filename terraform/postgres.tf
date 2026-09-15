@@ -54,8 +54,8 @@ resource "azurerm_postgresql_flexible_server" "mlflow" {
   administrator_login    = "litellmadmin"
   administrator_password = random_password.postgres_admin_password.result
 
-  storage_mb   = 32768
-  sku_name     = "B_Standard_B1ms"
+  storage_mb = 32768
+  sku_name   = "B_Standard_B1ms"
 
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
 }
@@ -63,9 +63,4 @@ resource "azurerm_postgresql_flexible_server" "mlflow" {
 moved {
   from = azurerm_postgresql_flexible_server.litellm
   to   = azurerm_postgresql_flexible_server.mlflow
-}
-
-output "postgres_server_fqdn" {
-  description = "Private FQDN of the shared Postgres server (resolvable only from inside the VNet)."
-  value       = azurerm_postgresql_flexible_server.mlflow.fqdn
 }

@@ -1,7 +1,9 @@
 # Standalone MLflow
 
-**Naming note:** renamed from `standalone-litellm`; the Terraform module and admin script still deploy a LiteLLM container internally (not yet ported to MLflow's gateway architecture). See the root [README.md](../README.md) for details.
+This directory is an essential, self-contained Terraform root for deploying an AI gateway in a customer environment.
 
-Start with [mlflow.md](mlflow.md) for the short resource explanation, five-value deployment setup, parameter-driven admin commands, backups, and staged upgrade/rollback runbook.
+**Implementation note:** this package currently deploys the same hardened LiteLLM gateway baseline used in the standalone LiteLLM package. The folder is retained as a dedicated standalone entry point for MLflow-track users while the fully distinct standalone MLflow runtime module evolves.
+
+Start with [mlflow.md](mlflow.md) for the short resource explanation, core deployment setup, parameter-driven admin commands, backups, and staged upgrade/rollback runbook.
 
 This directory is a separate Terraform root. Its reusable child module is under [modules/mlflow/variables.tf](modules/mlflow/variables.tf). It does not use the existing demo stack or state.

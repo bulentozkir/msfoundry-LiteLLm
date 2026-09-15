@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
-# App Service Plan, chat-client2 app and its private endpoint.
-# Kept outside the MLflow gateway resource file; addresses/settings are unchanged.
+# App Service plan plus chat2 web app resources.
+# chat1 (LiteLLM-backed) resources are in litellm-chat1.tf.
 # ---------------------------------------------------------------------------
 
 resource "azurerm_service_plan" "chat_client" {
@@ -52,9 +52,9 @@ resource "azurerm_linux_web_app" "chat_client2" {
 
   app_settings = {
     # Use the same public, governed entry point used to manage the gateway.
-    "Mlflow__BaseUrl"       = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/gateway/mlflow/v1"
-    "Mlflow__Model"         = var.mlflow_model_alias
-    "Mlflow__PhiModel"      = var.phi_model_alias
+    "Mlflow__BaseUrl"  = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/gateway/mlflow/v1"
+    "Mlflow__Model"    = var.mlflow_model_alias
+    "Mlflow__PhiModel" = var.phi_model_alias
     # The gateway now requires HTTP Basic Auth (see mlflow-gateway-app.tf) -
     # App Service app_settings don't have Container Apps' "$$ -> $" quirk, so
     # this is passed through as-is, unlike the container's admin-password secret.
@@ -83,12 +83,3 @@ resource "azurerm_private_endpoint" "chat_client2" {
   }
 }
 
-output "chat_client2_url" {
-  description = "Public URL of the second (access-key only, no Entra ID) chat client through Azure Front Door."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client2.host_name}"
-}
-
-output "chat_phi_url" {
-  description = "Phi chat on the same App Service and Front Door as Mini."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client2.host_name}/chatphi"
-}

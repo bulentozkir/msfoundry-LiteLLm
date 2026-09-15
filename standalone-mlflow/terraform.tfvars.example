@@ -1,5 +1,8 @@
 # Copy to terraform.tfvars and replace these values. This file has no credentials.
 subscription_id = "00000000-0000-0000-0000-000000000000"
+# Optional but recommended: when set, this root grants the gateway managed
+# identity both required Foundry roles for Azure OpenAI + model inference.
+foundry_account_id = "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account>"
 
 deployment = {
   name                  = "litellm"
@@ -9,7 +12,30 @@ deployment = {
   allowed_ingress_cidrs = ["203.0.113.10/32"] # REPLACE with your egress IP; example address cannot reach the app.
   revision_suffix       = "initial"
   postgres_backup_days  = 7 # Native PaaS backup/PITR retention: 7-35 days.
-  model_list            = [] # Add models via Admin UI or configure below.
+  # Same two aliases used by chat1/chat2: Mini and Phi.
+  provider_environment = {
+    AZURE_API_BASE    = "https://<foundry-account>.openai.azure.com"
+    AZURE_API_VERSION = "2024-10-21"
+    AZURE_AI_API_BASE = "https://<foundry-account>.services.ai.azure.com/models"
+  }
+  model_list = [
+    {
+      model_name = "gpt-5.4-mini"
+      litellm_params = {
+        model       = "azure/gpt-5.4-mini"
+        api_base    = "os.environ/AZURE_API_BASE"
+        api_version = "os.environ/AZURE_API_VERSION"
+      }
+    },
+    {
+      model_name = "phi-4"
+      litellm_params = {
+        model       = "azure_ai/Phi-4"
+        api_base    = "os.environ/AZURE_AI_API_BASE"
+        api_version = "2024-05-01-preview"
+      }
+    }
+  ]
   tags                  = { environment = "test", owner = "platform-team" }
 
   # Optional model-provider configuration (not tied to Azure/Foundry):

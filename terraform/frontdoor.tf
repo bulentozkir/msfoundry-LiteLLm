@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Azure Front Door Standard in front of chat-client2. Standard tier cannot
+# Azure Front Door Standard in front of chat1 and chat2. Standard tier cannot
 # reach a Private-Link-only origin, so chat-client2's public network access
 # is re-enabled (see mlflow-gateway-app.tf) and locked down to accept traffic only from
 # this specific Front Door profile (service tag + X-Azure-FDID header check -
@@ -53,11 +53,11 @@ resource "azurerm_cdn_frontdoor_origin" "chat_client2" {
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.chat_client2.id
 
   host_name                      = azurerm_linux_web_app.chat_client2.default_hostname
-  origin_host_header              = azurerm_linux_web_app.chat_client2.default_hostname
+  origin_host_header             = azurerm_linux_web_app.chat_client2.default_hostname
   http_port                      = 80
   https_port                     = 443
-  priority                        = 1
-  weight                          = 1000
+  priority                       = 1
+  weight                         = 1000
   certificate_name_check_enabled = true
 }
 
@@ -68,15 +68,60 @@ resource "azurerm_cdn_frontdoor_route" "chat_client2" {
   cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.chat_client2.id]
 
   supported_protocols    = ["Http", "Https"]
-  patterns_to_match       = ["/*"]
-  forwarding_protocol     = "HttpsOnly"
-  https_redirect_enabled  = true
-  link_to_default_domain  = true
+  patterns_to_match      = ["/*"]
+  forwarding_protocol    = "HttpsOnly"
+  https_redirect_enabled = true
+  link_to_default_domain = true
 }
 
-output "chat_client2_frontdoor_url" {
-  description = "Public HTTPS URL of chat-client2 via Azure Front Door Standard (the only public entry point - the App Service origin itself only accepts traffic from this Front Door)."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client2.host_name}"
+resource "azurerm_cdn_frontdoor_endpoint" "chat_client1" {
+  name                     = "fde-chat1-${random_string.suffix.result}"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+  tags                     = var.tags
+}
+
+resource "azurerm_cdn_frontdoor_origin_group" "chat_client1" {
+  name                     = "og-chat-client1"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+
+  health_probe {
+    path                = "/"
+    protocol            = "Https"
+    request_type        = "HEAD"
+    interval_in_seconds = 100
+  }
+
+  load_balancing {
+    additional_latency_in_milliseconds = 50
+    sample_size                        = 4
+    successful_samples_required        = 3
+  }
+}
+
+resource "azurerm_cdn_frontdoor_origin" "chat_client1" {
+  name                          = "origin-chat-client1"
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.chat_client1.id
+
+  host_name                      = azurerm_linux_web_app.chat_client1.default_hostname
+  origin_host_header             = azurerm_linux_web_app.chat_client1.default_hostname
+  http_port                      = 80
+  https_port                     = 443
+  priority                       = 1
+  weight                         = 1000
+  certificate_name_check_enabled = true
+}
+
+resource "azurerm_cdn_frontdoor_route" "chat_client1" {
+  name                          = "route-chat-client1"
+  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.chat_client1.id
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.chat_client1.id
+  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.chat_client1.id]
+
+  supported_protocols    = ["Http", "Https"]
+  patterns_to_match      = ["/*"]
+  forwarding_protocol    = "HttpsOnly"
+  https_redirect_enabled = true
+  link_to_default_domain = true
 }
 
 # ---------------------------------------------------------------------------
@@ -117,12 +162,12 @@ resource "azurerm_cdn_frontdoor_origin" "litellm2" {
   name                          = "origin-litellm2"
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.litellm2.id
 
-  host_name                       = azurerm_container_app.mlflow_gateway.ingress[0].fqdn
-  origin_host_header              = azurerm_container_app.mlflow_gateway.ingress[0].fqdn
+  host_name                      = azurerm_container_app.mlflow_gateway.ingress[0].fqdn
+  origin_host_header             = azurerm_container_app.mlflow_gateway.ingress[0].fqdn
   http_port                      = 80
   https_port                     = 443
-  priority                        = 1
-  weight                          = 1000
+  priority                       = 1
+  weight                         = 1000
   certificate_name_check_enabled = true
 }
 
@@ -137,10 +182,5 @@ resource "azurerm_cdn_frontdoor_route" "litellm2" {
   forwarding_protocol    = "HttpsOnly"
   https_redirect_enabled = true
   link_to_default_domain = true
-}
-
-output "mlflow_gateway_ui_url" {
-  description = "MLflow UI/gateway endpoint via Front Door. Not authenticated beyond Front Door's IP allowlist - do not expose sensitive data here."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/"
 }
 

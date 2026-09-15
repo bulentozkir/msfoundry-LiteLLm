@@ -1,0 +1,15 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+*.auto.tfvars.json
+*.tfplan
+tfplan*
+crash.log
+*.zip
+backups/
+*.cms
+*.dump
+*.log
+# Commit .terraform.lock.hcl for reproducible provider selection.

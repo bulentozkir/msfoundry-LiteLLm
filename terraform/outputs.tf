@@ -83,6 +83,26 @@ output "chat_client2_frontdoor_url" {
   value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client2.host_name}"
 }
 
+output "chat_client3_url" {
+  description = "Public URL of chat3 (APIM-backed) through Azure Front Door."
+  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client3.host_name}"
+}
+
+output "chat3_phi_url" {
+  description = "Phi chat URL on chat3 (APIM-backed)."
+  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client3.host_name}/chat3phi"
+}
+
+output "chat_client3_frontdoor_url" {
+  description = "Public HTTPS URL of chat3 via Azure Front Door Standard."
+  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client3.host_name}"
+}
+
+output "apim_chat3_gateway_url" {
+  description = "APIM Developer gateway base URL for chat3 API path."
+  value       = "${trimsuffix(azurerm_api_management.chat3.gateway_url, "/")}/${azurerm_api_management_api.chat3_foundry.path}"
+}
+
 output "test_curl_command" {
   description = "Example request to smoke-test the deployed gateway through Azure Front Door once apply completes."
   value       = "curl -s https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/gateway/mlflow/v1/chat/completions -H \"Content-Type: application/json\" -d '{\"model\": \"${var.mlflow_model_alias}\", \"messages\": [{\"role\": \"user\", \"content\": \"Say hello in five words.\"}]}'"

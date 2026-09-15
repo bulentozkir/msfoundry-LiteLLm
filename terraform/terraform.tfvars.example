@@ -16,6 +16,12 @@ mlflow_model_alias = "gpt-5.4-mini"
 mlflow_admin_username = "aiadmin"
 mlflow_admin_password = ""   # required to log into the MLflow gateway UI/API
 
+# Flow 3: Front Door -> chat3 web app -> APIM Developer -> Foundry.
+chat_client3_app_name = "litellm-chat3-ntzf8l"
+apim_publisher_name   = "Platform Team"
+apim_publisher_email  = "platform-team@example.com"
+apim_phi_api_version  = "2024-05-01-preview"
+
 # Flow 1: Front Door -> chat1 web app -> LiteLLM on its own ACA -> Foundry.
 # Set this to the LiteLLM OpenAI-compatible base URL (typically .../v1).
 litellm_chat1_base_url = "https://<litellm-host>/v1"

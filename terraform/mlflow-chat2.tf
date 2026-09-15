@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------------
 # App Service plan plus chat2 web app resources.
 # chat1 (LiteLLM-backed) resources are in litellm-chat1.tf.
+# chat3 (APIM-backed) resources are in apim-chat3.tf.
 # ---------------------------------------------------------------------------
 
 resource "azurerm_service_plan" "chat_client" {

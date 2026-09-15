@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Azure Front Door Standard in front of chat1 and chat2. Standard tier cannot
+# Azure Front Door Standard in front of chat1, chat2, and chat3. Standard tier cannot
 # reach a Private-Link-only origin, so chat-client2's public network access
 # is re-enabled (see mlflow-gateway-app.tf) and locked down to accept traffic only from
 # this specific Front Door profile (service tag + X-Azure-FDID header check -
@@ -116,6 +116,56 @@ resource "azurerm_cdn_frontdoor_route" "chat_client1" {
   cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.chat_client1.id
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.chat_client1.id
   cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.chat_client1.id]
+
+  supported_protocols    = ["Http", "Https"]
+  patterns_to_match      = ["/*"]
+  forwarding_protocol    = "HttpsOnly"
+  https_redirect_enabled = true
+  link_to_default_domain = true
+}
+
+resource "azurerm_cdn_frontdoor_endpoint" "chat_client3" {
+  name                     = "fde-chat3-${random_string.suffix.result}"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+  tags                     = var.tags
+}
+
+resource "azurerm_cdn_frontdoor_origin_group" "chat_client3" {
+  name                     = "og-chat-client3"
+  cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.main.id
+
+  health_probe {
+    path                = "/"
+    protocol            = "Https"
+    request_type        = "HEAD"
+    interval_in_seconds = 100
+  }
+
+  load_balancing {
+    additional_latency_in_milliseconds = 50
+    sample_size                        = 4
+    successful_samples_required        = 3
+  }
+}
+
+resource "azurerm_cdn_frontdoor_origin" "chat_client3" {
+  name                          = "origin-chat-client3"
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.chat_client3.id
+
+  host_name                      = azurerm_linux_web_app.chat_client3.default_hostname
+  origin_host_header             = azurerm_linux_web_app.chat_client3.default_hostname
+  http_port                      = 80
+  https_port                     = 443
+  priority                       = 1
+  weight                         = 1000
+  certificate_name_check_enabled = true
+}
+
+resource "azurerm_cdn_frontdoor_route" "chat_client3" {
+  name                          = "route-chat-client3"
+  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.chat_client3.id
+  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.chat_client3.id
+  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.chat_client3.id]
 
   supported_protocols    = ["Http", "Https"]
   patterns_to_match      = ["/*"]

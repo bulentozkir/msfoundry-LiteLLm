@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Foundry Chat 3</title>
+    <script>
+        (() => {
+            const param = new URLSearchParams(window.location.search).get("scoutTheme");
+            const theme = param === "light" || param === "dark"
+                ? param
+                : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            document.documentElement.setAttribute("data-theme", theme);
+        })();
+    </script>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ChatClient3.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+        <nav class="site-nav" aria-label="Main navigation">
+            <a class="site-brand" asp-page="/Index"><span class="brand-mark" aria-hidden="true">✦</span> Foundry Chat 3</a>
+            <div class="chat-nav">
+                <a asp-page="/Chat2" aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Chat2" ? "page" : null)">Mini</a>
+                <a asp-page="/Chat" aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Chat" ? "page" : null)">Phi</a>
+            </div>
+        </nav>
+    </header>
+    <div class="site-container">
+        <main id="main-content">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        <span>Foundry Chat 3</span>
+        <span>Powered by APIM Developer · No sign-in required</span>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

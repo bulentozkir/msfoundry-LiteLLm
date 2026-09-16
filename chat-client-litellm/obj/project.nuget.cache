@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "xw1/kfxN0Qw=",
+  "dgSpecHash": "Z8VSrwVrjNI=",
   "success": true,
-  "projectFilePath": "c:\\gitrepo\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj",
+  "projectFilePath": "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

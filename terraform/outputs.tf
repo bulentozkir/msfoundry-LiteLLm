@@ -29,23 +29,23 @@ output "mlflow_acr_login_server" {
 }
 
 output "mlflow_gateway_url" {
-  description = "Public URL of the MLflow AI Gateway through Azure Front Door. The direct Container Apps origin is IP-restricted."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}"
+  description = "Direct Container Apps URL of the legacy MLflow gateway. Ingress remains restricted to VNet callers."
+  value       = "https://${azurerm_container_app.mlflow_gateway.ingress[0].fqdn}"
 }
 
 output "mlflow_gateway_ui_url" {
-  description = "MLflow UI/gateway endpoint via Front Door. Not authenticated beyond Front Door's IP allowlist - do not expose sensitive data here."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/"
+  description = "Direct MLflow UI endpoint. Ingress remains restricted to VNet callers."
+  value       = "https://${azurerm_container_app.mlflow_gateway.ingress[0].fqdn}/"
 }
 
 output "chat1_url" {
-  description = "Public URL of chat1 (LiteLLM-backed) through Azure Front Door."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client1.host_name}"
+  description = "Direct App Service URL of legacy chat1 (LiteLLM-backed)."
+  value       = "https://${azurerm_linux_web_app.chat_client1.default_hostname}"
 }
 
 output "chat1_phi_url" {
   description = "Phi chat URL on chat1 (LiteLLM-backed)."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client1.host_name}/chatphi"
+  value       = "https://${azurerm_linux_web_app.chat_client1.default_hostname}/chatphi"
 }
 
 output "litellm_redis_id" {
@@ -63,49 +63,19 @@ output "litellm_redis_port" {
   value       = try(azurerm_managed_redis.litellm[0].default_database[0].port, null)
 }
 
-output "chat_client1_frontdoor_url" {
-  description = "Public HTTPS URL of chat1 via the same Azure Front Door profile."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client1.host_name}"
-}
-
 output "chat_client2_url" {
-  description = "Public URL of chat2 (MLflow-backed) through Azure Front Door."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client2.host_name}"
+  description = "Direct App Service URL of legacy chat2 (MLflow-backed)."
+  value       = "https://${azurerm_linux_web_app.chat_client2.default_hostname}"
 }
 
 output "chat_phi_url" {
   description = "Phi chat URL on chat2 (MLflow-backed)."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client2.host_name}/chatphi"
-}
-
-output "chat_client2_frontdoor_url" {
-  description = "Public HTTPS URL of chat-client2 via Azure Front Door Standard (the only public entry point - the App Service origin itself only accepts traffic from this Front Door)."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client2.host_name}"
-}
-
-output "chat_client3_url" {
-  description = "Public URL of chat3 (APIM-backed) through Azure Front Door."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client3.host_name}"
-}
-
-output "chat3_phi_url" {
-  description = "Phi chat URL on chat3 (APIM-backed)."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client3.host_name}/chat3phi"
-}
-
-output "chat_client3_frontdoor_url" {
-  description = "Public HTTPS URL of chat3 via Azure Front Door Standard."
-  value       = "https://${azurerm_cdn_frontdoor_endpoint.chat_client3.host_name}"
-}
-
-output "apim_chat3_gateway_url" {
-  description = "APIM Developer gateway base URL for chat3 API path."
-  value       = "${trimsuffix(azurerm_api_management.chat3.gateway_url, "/")}/${azurerm_api_management_api.chat3_foundry.path}"
+  value       = "https://${azurerm_linux_web_app.chat_client2.default_hostname}/chatphi"
 }
 
 output "test_curl_command" {
-  description = "Example request to smoke-test the deployed gateway through Azure Front Door once apply completes."
-  value       = "curl -s https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name}/gateway/mlflow/v1/chat/completions -H \"Content-Type: application/json\" -d '{\"model\": \"${var.mlflow_model_alias}\", \"messages\": [{\"role\": \"user\", \"content\": \"Say hello in five words.\"}]}'"
+  description = "Example request to smoke-test the legacy gateway from an allowed VNet caller."
+  value       = "curl -s https://${azurerm_container_app.mlflow_gateway.ingress[0].fqdn}/gateway/mlflow/v1/chat/completions -H \"Content-Type: application/json\" -d '{\"model\": \"${var.mlflow_model_alias}\", \"messages\": [{\"role\": \"user\", \"content\": \"Say hello in five words.\"}]}'"
 }
 
 output "test_curl_litellm_command" {

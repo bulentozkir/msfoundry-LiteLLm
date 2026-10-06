@@ -2,7 +2,7 @@ using ChatClient3.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Chat3 calls APIM Developer, which then routes to Foundry model endpoints.
+// Chat3 calls the APIM AI Gateway, which routes to Foundry model deployments.
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<ApimChatService>();
 
@@ -13,12 +13,12 @@ builder.Services.AddHttpClient("Apim", client =>
     client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(25);
 
-    var subscriptionKey = builder.Configuration["Apim:SubscriptionKey"];
-    if (!string.IsNullOrEmpty(subscriptionKey))
+    var gatewayKey = builder.Configuration["Apim:GatewayKey"];
+    if (!string.IsNullOrEmpty(gatewayKey))
     {
-        client.DefaultRequestHeaders.Remove("Ocp-Apim-Subscription-Key");
+        client.DefaultRequestHeaders.Remove("api-key");
         client.DefaultRequestHeaders.TryAddWithoutValidation(
-            "Ocp-Apim-Subscription-Key", subscriptionKey);
+            "api-key", gatewayKey);
     }
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {

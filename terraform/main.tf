@@ -31,12 +31,8 @@ resource "azurerm_container_app_environment" "main" {
   logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
   infrastructure_subnet_id   = azurerm_subnet.aca.id
-  # Public again at the user's explicit request (Front Door Standard can't
-  # reach a private-only environment - Private Link to origin needs Premium,
-  # already declined for cost). The MLflow gateway's ingress is locked down
-  # to Front Door's published IP ranges via ip_security_restriction in mlflow-gateway-app.tf -
-  # weaker than the FDID-header check used for chat-client2 (Container Apps
-  # only supports CIDR ranges, not service tags or header matching).
+  # The legacy MLflow gateway keeps external ingress for its stable Container
+  # Apps hostname, with access restricted to VNet callers on the app resource.
   tags = var.tags
 
   # Keep the existing Consumption workload profile explicit so Terraform does

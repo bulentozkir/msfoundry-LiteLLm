@@ -26,6 +26,7 @@
             <div class="chat-nav">
                 <a asp-page="/Chat2" aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Chat2" ? "page" : null)">Mini</a>
                 <a asp-page="/Chat" aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Chat" ? "page" : null)">Phi</a>
+                <a asp-page="/ChatDeepSeek" aria-current="@(ViewContext.RouteData.Values["page"]?.ToString() == "/ChatDeepSeek" ? "page" : null)">DeepSeek</a>
             </div>
         </nav>
     </header>
@@ -37,7 +38,7 @@
 
     <footer class="site-footer">
         <span>Foundry Chat 3</span>
-        <span>Powered by APIM Developer · No sign-in required</span>
+        <span>Powered by APIM AI Gateway · No sign-in required</span>
     </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

@@ -27,18 +27,7 @@ resource "azurerm_linux_web_app" "chat_client1" {
       dotnet_version = "10.0"
     }
     minimum_tls_version           = "1.2"
-    ip_restriction_default_action = "Deny"
-
-    ip_restriction {
-      action      = "Allow"
-      name        = "AllowAzureFrontDoorOnly"
-      priority    = 100
-      service_tag = "AzureFrontDoor.Backend"
-
-      headers {
-        x_azure_fdid = [azurerm_cdn_frontdoor_profile.main.resource_guid]
-      }
-    }
+    ip_restriction_default_action = "Allow"
   }
 
   app_settings = {

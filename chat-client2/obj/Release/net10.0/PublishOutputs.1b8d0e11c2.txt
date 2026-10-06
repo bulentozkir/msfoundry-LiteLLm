@@ -1,0 +1,13 @@
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\ChatClient2.exe
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\publish\web.config
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\appsettings.Development.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\appsettings.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\publish\appsettings.Development.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\publish\appsettings.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\publish\ChatClient2.deps.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\publish\ChatClient2.runtimeconfig.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\publish\ChatClient2.staticwebassets.endpoints.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\ChatClient2.dll
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\ChatClient2.deps.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\ChatClient2.runtimeconfig.json
+C:\Users\bulento\AppData\Local\Temp\chat2-deepseek-publish-22bf8fef7cb74174a0d43937e0437e03\ChatClient2.pdb

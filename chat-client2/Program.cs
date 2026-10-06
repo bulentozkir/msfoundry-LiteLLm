@@ -2,10 +2,6 @@ using ChatClient2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// The MLflow gateway is now protected by HTTP Basic Auth (mlflow.server.auth -
-// see terraform/mlflow-gateway-app.tf), so this client authenticates its own
-// calls with the same admin credentials rather than relying on network
-// restrictions alone.
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<MlflowChatService>();
 
@@ -14,7 +10,7 @@ builder.Services.AddHttpClient("Mlflow", client =>
     var baseUrl = builder.Configuration["Mlflow:BaseUrl"]
         ?? throw new InvalidOperationException("Mlflow:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
-    client.Timeout = TimeSpan.FromSeconds(25);
+    client.Timeout = TimeSpan.FromSeconds(120);
     var apiKey = builder.Configuration["Mlflow:ApiKey"];
     if (!string.IsNullOrEmpty(apiKey))
     {

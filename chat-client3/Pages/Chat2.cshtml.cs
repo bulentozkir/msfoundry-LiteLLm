@@ -7,7 +7,7 @@ public class Chat2Model(ApimChatService chatService, IConfiguration configuratio
 {
     // Preserve the original mini conversation's JSON shape and session key.
     protected override string SessionKey => "Conversation";
-    public override string ModelName => configuration["Apim:Model"] ?? "gpt-5.4-mini";
+    public override string ModelName => configuration["Apim:Model"] ?? "Gpt5.4mini";
     public override string ChatTitle => "Mini";
     public override string PageRoute => "/Chat2";
 }

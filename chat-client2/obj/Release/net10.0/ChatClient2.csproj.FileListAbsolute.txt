@@ -96,3 +96,9 @@ C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\xwykj6d
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\ofb0jrlldy-{0}-8s9qhiwq8h-8s9qhiwq8h.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\7y8y9tg8na-{0}-kj0fds24ze-kj0fds24ze.gz
 C:\gitrepo\msfoundry-LiteLLm\chat-client2\obj\Release\net10.0\compressed\5glx3a1mie-{0}-kj0fds24ze-kj0fds24ze.gz
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\bin\Release\net10.0\publish\web.config
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\bin\Release\net10.0\publish\appsettings.Development.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\bin\Release\net10.0\publish\appsettings.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\bin\Release\net10.0\publish\ChatClient2.deps.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\bin\Release\net10.0\publish\ChatClient2.runtimeconfig.json
+C:\gitrepo\msfoundry-LiteLLm\chat-client2\bin\Release\net10.0\publish\ChatClient2.staticwebassets.endpoints.json

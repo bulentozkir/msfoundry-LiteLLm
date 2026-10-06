@@ -28,7 +28,7 @@ public sealed class MlflowChatService(IHttpClientFactory httpClientFactory,
         var client = httpClientFactory.CreateClient("Mlflow");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         // Covers response-body reads as well as the initial HTTP request.
-        timeout.CancelAfter(TimeSpan.FromSeconds(25));
+        timeout.CancelAfter(TimeSpan.FromSeconds(120));
         using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
             Content = JsonContent.Create(new

@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # MLflow AI Gateway: runs inside the existing ca-litellm2 Container App (see
 # mlflow-gateway-app.tf, renamed to azurerm_container_app.mlflow_gateway via a
-# moved block) - same identity, same Front Door route, LiteLLM removed entirely.
+# moved block) with the same identity; LiteLLM was removed entirely.
 # Only the ACR, the gateway's own Postgres database, and ACR-pull RBAC are
 # new resources.
 #

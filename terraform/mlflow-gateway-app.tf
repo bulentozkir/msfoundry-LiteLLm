@@ -1,11 +1,11 @@
 # ---------------------------------------------------------------------------
 # MLflow AI Gateway now runs here, in-place, reusing the same Container App
-# resource, name, identity, and Front Door route that the old LiteLLM proxy
+# resource, name, and identity that the old LiteLLM proxy
 # used - see mlflow-gateway.tf for the ACR/Postgres-database/RBAC and
 # storage.tf for the artifact-store Storage Account this needs. LiteLLM, its
 # master key, Redis and its admin-UI credentials are removed entirely; the
-# chat-client2 -> gateway leg drops to no-auth (network-restricted by the
-# same Front Door CIDR allowlist below), and the gateway -> Foundry leg still
+# chat-client2 -> gateway leg uses HTTP Basic Auth over the VNet-restricted
+# direct Container Apps endpoint, and the gateway -> Foundry leg still
 # uses managed identity (see refresh_secrets.py sidecar).
 # ---------------------------------------------------------------------------
 
@@ -139,8 +139,8 @@ resource "azurerm_container_app" "mlflow_gateway" {
         name  = "MLFLOW_ENABLE_AI_GATEWAY"
         value = "true"
       }
-      # Without this, mlflow's own DNS-rebinding guard 403s every request that
-      # arrives via Front Door (its Host header isn't localhost/private-IP).
+      # Keep MLflow's DNS-rebinding guard aligned with the direct Container Apps
+      # hostname and the localhost sidecar calls.
       # Setting this env var REPLACES mlflow's default allowlist rather than
       # extending it, so localhost must be listed explicitly too - otherwise
       # the refresh-secrets sidecar's own http://localhost:4000 calls 403.
@@ -152,7 +152,7 @@ resource "azurerm_container_app" "mlflow_gateway" {
       # matching what mlflow's own get_default_allowed_hosts() does.
       env {
         name  = "MLFLOW_SERVER_ALLOWED_HOSTS"
-        value = "localhost,localhost:*,127.0.0.1,127.0.0.1:*,${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name},ca-${var.project_name}2.${azurerm_container_app_environment.main.default_domain}"
+        value = "localhost,localhost:*,127.0.0.1,127.0.0.1:*,ca-${var.project_name}2.${azurerm_container_app_environment.main.default_domain}"
       }
       # The gateway UI's own same-origin fetch/XHR calls (e.g. the Usage tab)
       # send an Origin header and are state-changing (POST), so without this
@@ -161,7 +161,7 @@ resource "azurerm_container_app" "mlflow_gateway" {
       # Must be scheme+host, no path (see is_localhost_origin/should_block_cors_request).
       env {
         name  = "MLFLOW_SERVER_CORS_ALLOWED_ORIGINS"
-        value = "https://${azurerm_cdn_frontdoor_endpoint.litellm2_admin.host_name},https://ca-${var.project_name}2.${azurerm_container_app_environment.main.default_domain}"
+        value = "https://ca-${var.project_name}2.${azurerm_container_app_environment.main.default_domain}"
       }
       env {
         name  = "AZURE_CLIENT_ID"
@@ -212,21 +212,11 @@ resource "azurerm_container_app" "mlflow_gateway" {
     target_port      = 4000
     transport        = "auto"
 
-    dynamic "ip_security_restriction" {
-      for_each = toset(data.azurerm_network_service_tags.frontdoor_backend.ipv4_cidrs)
-      content {
-        name             = "fd-${replace(replace(ip_security_restriction.value, "/", "-"), ":", "_")}"
-        action           = "Allow"
-        ip_address_range = ip_security_restriction.value
-        description      = "Azure Front Door backend pool"
-      }
-    }
-
     ip_security_restriction {
       name             = "vnet-internal"
       action           = "Allow"
       ip_address_range = tolist(azurerm_virtual_network.main.address_space)[0]
-      description      = "In-VNet callers (e.g. chat-client2's direct calls to the gateway, not routed through Front Door)"
+      description      = "In-VNet callers such as chat-client2"
     }
 
     traffic_weight {

@@ -3,11 +3,6 @@ output "resource_group_name" {
   value       = azurerm_resource_group.main.name
 }
 
-output "app3_url" {
-  description = "Direct public HTTPS endpoint for app3."
-  value       = "https://${azurerm_linux_web_app.app3.default_hostname}"
-}
-
 output "ai_gateway_base_url" {
   description = "OpenAI-compatible base URL exposed by the APIM AI Gateway tier."
   value       = local.ai_gateway_openai_base_url
@@ -20,7 +15,7 @@ output "ai_gateway_portal_url" {
 
 output "foundry_account_id" {
   description = "ARM ID of the Microsoft Foundry account."
-  value       = azurerm_cognitive_account.foundry.id
+  value       = azapi_resource.foundry.id
 }
 
 output "model_deployments" {
@@ -28,22 +23,30 @@ output "model_deployments" {
   value       = [for model in local.models : model.deployment_name]
 }
 
-output "deepseek_user_deployments" {
-  description = "Per-user Foundry deployment names; these are not published through AI Gateway."
+output "model_access_keys" {
+  description = "Three separate runtime keys, named by intended model. AIGateway preview keys are gateway-scoped, not model-isolated."
   value = {
-    for user_id, deployment in azurerm_cognitive_deployment.deepseek_user :
-    user_id => deployment.name
+    for model_id, model in local.models :
+    model.deployment_name => azapi_resource_action.runtime_api_key_secrets[model_id].sensitive_output.primaryKey
   }
+  sensitive = true
 }
 
-output "opencode_api_key" {
-  description = "Runtime access key for local OpenCode configuration."
-  value       = azapi_resource_action.opencode_api_key_secrets.sensitive_output.primaryKey
-  sensitive   = true
+output "runtime_key_scope" {
+  description = "Authorization scope of every runtime key in the AI Gateway preview tier."
+  value       = "gateway: every key can access all published models; per-model subscriptions are not supported"
 }
 
-output "zed_api_key" {
-  description = "Runtime access key for the local Zed OpenAI-compatible provider."
-  value       = azapi_resource_action.zed_api_key_secrets.sensitive_output.primaryKey
-  sensitive   = true
+output "shared_vnet_id" {
+  description = "Shared virtual network for AI Gateway and Foundry."
+  value       = azurerm_virtual_network.shared.id
+}
+
+output "subnet_ids" {
+  description = "Foundry inbound/outbound and AI Gateway outbound subnets. Public gateway ingress needs no private-endpoint subnet."
+  value = {
+    foundry_inbound     = azurerm_subnet.foundry_inbound.id
+    foundry_outbound    = azurerm_subnet.foundry_outbound.id
+    ai_gateway_outbound = azurerm_subnet.ai_gateway_outbound.id
+  }
 }

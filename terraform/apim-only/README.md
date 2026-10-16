@@ -1,92 +1,125 @@
-# App3 + APIM AI Gateway + Microsoft Foundry
+# Public APIM AI Gateway + private Microsoft Foundry
 
 This isolated Terraform root deploys only:
 
-- chat-client3 on Azure App Service
+- one resource group
 - API Management in the `AIGateway` preview pricing tier
-- one Microsoft Foundry account with `Gpt5.4mini`, `Phi`, and
-  `FW-DeepSeek-V4.1-Flash` deployments
-- ten additional per-user DeepSeek deployments in the same account
-- managed-identity access from AI Gateway to Foundry
-- separate AI Gateway runtime keys for app3, OpenCode, and Zed
-- a DeepSeek cost-limit policy whose current per-key allocations total $200 per
-  calendar month
+- one Microsoft Foundry `AIServices` account with exactly three model deployments
+- account-scoped Foundry User access for the gateway's managed identity
+- the Foundry provider connection, three gateway model registrations and aliases,
+  and three independent gateway runtime keys
+- one shared VNet, three dedicated subnets, supporting NSGs, one Foundry private
+  endpoint, and three private DNS zones linked to the shared VNet
 
-The DeepSeek deployment name maps to the current generally available Foundry
-catalog model `DeepSeek-V4-Flash` version `2026-04-23` through the
-`FW-DeepSeek-V4.1-Flash` Global Standard deployment. Its capacity is 250, which
-currently maps to 250 requests and 250,000 tokens per minute. This uses the current
-regional Global Standard quota for this model; sustained traffic above this limit
-requires an approved quota increase. Azure Front Door,
-LiteLLM, MLflow, chat1, and chat2 are not part of this Terraform state.
+It does not deploy App Service, App Service plans, per-user model deployments,
+LiteLLM, MLflow, databases, Redis, storage accounts, monitoring, agents, or projects.
+Other Terraform roots and existing client configurations are not used or changed.
 
-## Per-user DeepSeek deployments
+## Target and models
 
-The `azurerm_cognitive_deployment.deepseek_user` resource creates
-`user1-FW-DeepSeek-V4.1-Flash` through `user10-FW-DeepSeek-V4.1-Flash` in the
-existing Foundry account. Each uses the same `DeepSeek-V4-Flash` catalog model,
-version `2026-04-23`, with automatic version upgrades disabled.
-
-| Setting | Default |
+| Setting | Value |
 | --- | --- |
-| `deepseek_user_count` | 10 |
-| `deepseek_user_capacity` | 25 units per deployment |
-| SKU | `DataZoneStandard` |
-| Per-deployment throughput | 25,000 TPM and 25 RPM |
-| Total Data Zone Standard quota allocation | 250,000 TPM |
+| Entra tenant | `16b3c013-d300-468d-ac64-7eda0820b6d3` |
+| Subscription | `fb7dfa70-78b9-4e56-8d2d-fa2eff765241` |
+| Resource group | `rg-foundry-aigateway-sweden` |
+| Region | Sweden Central |
 
-This uses the separate Data Zone Standard quota; the original Global Standard
-deployment retains its 250,000 TPM allocation. Increasing the count or capacity
-requires sufficient unallocated regional quota. A 25,000 TPM limit can still
-throttle large agent prompts.
+| Deployment / gateway alias | Catalog model | Version | Global Standard capacity |
+| --- | --- | --- | --- |
+| `Gpt5.4mini` | `gpt-5.4-mini` | `2026-03-17` | 1 |
+| `Phi` | `Phi-4` | `7` | 1 |
+| `FW-DeepSeek-V4.1-Flash` | `DeepSeek-V4-Flash` | `2026-04-23` | 250 |
 
-The `deepseek_user_deployments` Terraform output maps each user ID to its
-deployment name. Filter Foundry's `Input Tokens`, `Output Tokens`, or
-`Total Tokens` metrics by `ModelDeploymentName` to view each deployment's usage.
-Names alone do not enforce user access: no user identities, RBAC assignments,
-or individual API keys are created. Direct Foundry access still requires an
-authorized Microsoft Entra identity because Azure Policy disables key access.
+The DeepSeek deployment name is an alias for the catalog model shown above, not
+a separate model version. All three deployments disable automatic version
+upgrades. Quota and regional availability must be checked before applying.
 
-These deployments are not added to APIM's model registry or aliases. The existing
-APIM routes and monthly budget policy are unchanged, and that policy does not
-cover direct calls to the new deployments. Publishing them through APIM with
-per-user authentication and budgets is a separate configuration step.
+Foundry local authentication and public network access are disabled. The gateway
+uses its system-assigned managed identity to invoke Foundry privately; clients
+reach the public gateway over HTTPS and authenticate with a gateway runtime key.
 
-## Deployed endpoints
+## Shared VNet and traffic flow
 
-- App3: <https://foundry-chat3-8ps1sz.azurewebsites.net>
-- AI Gateway OpenAI base URL:
-  <https://aigw-foundry-8ps1sz.azure-api.net/default/models/openai/v1>
-- AI Gateway portal: <https://ai.gateway.azure.com>
+`internet client -> public AI Gateway -> shared VNet -> Foundry private endpoint`
 
-## OpenCode
+The shared VNet is `10.42.0.0/16` in Sweden Central:
 
-OpenCode is installed globally on Windows. Its user configuration is stored at
-`~/.config/opencode/opencode.json`, and its dedicated runtime key is stored at
-`~/.secrets/apim-aigateway-opencode-key` with inherited ACLs disabled. The
-secret is not stored in this repository.
+| Subnet | Address range | Purpose / delegation |
+| --- | --- | --- |
+| `snet-foundry-inbound` | `10.42.0.0/24` | Foundry private endpoint |
+| `snet-foundry-outbound` | `10.42.1.0/24` | Foundry outbound injection; `Microsoft.App/environments` |
+| `snet-aigw-outbound` | `10.42.2.0/24` | AI Gateway outbound integration; `Microsoft.Web/serverFarms` |
 
-Run OpenCode from any project with:
+A fourth gateway-inbound subnet/private endpoint is unnecessary because clients
+reach the gateway from the internet. Its outbound NSG permits HTTPS to Foundry
+and the required Storage and Azure Key Vault platform dependencies; those service
+tags do not create storage accounts or vaults.
+
+The Foundry private-endpoint subnet permits HTTPS from the gateway and Foundry
+outbound subnets and denies other inbound traffic. Private DNS zones
+`privatelink.services.ai.azure.com`, `privatelink.openai.azure.com`, and
+`privatelink.cognitiveservices.azure.com` resolve the Foundry hostnames privately.
+Keep using the normal Foundry hostname, not a private-link hostname or IP address.
+
+Foundry outbound injection is configured when the account is created. It applies
+to supported agent/evaluation workloads, not to the placement of the model
+hosting infrastructure. No such workloads are deployed here. Injection routes
+supported outbound traffic into the VNet but is not an internet-egress firewall;
+no firewall, NAT gateway, or unrestricted-outbound-isolation claim is included.
+
+## Three access keys and preview limitation
+
+Terraform creates runtime keys named `gpt5-4mini`, `phi`, and
+`fw-deepseek-v4-1-flash`, so clients can manage and rotate them independently.
+
+**AI Gateway preview keys are gateway-scoped: each key can access all three
+published models. They are not model-isolated APIM subscriptions.** The
+`AIGateway` preview pricing tier does not currently support per-asset key scoping.
+The key names express intended usage only; they do not enforce authorization.
+See [runtime access keys](https://learn.microsoft.com/azure/api-management/ai-gateway-govern-secure-assets#runtime-access-keys).
+No monthly budget or application-specific cost policy is installed.
+
+## Deploy
+
+Use only this directory and a newly reviewed full plan, not the parent Terraform
+root or historical saved plans:
 
 ```powershell
-opencode
+az login --tenant 16b3c013-d300-468d-ac64-7eda0820b6d3
+az account set --subscription fb7dfa70-78b9-4e56-8d2d-fa2eff765241
+Set-Location .\terraform\apim-only
+terraform init
+terraform fmt -check
+terraform validate
+terraform test
+terraform plan -out=tfplan
+terraform apply tfplan
 ```
 
-The default model is `apim-aigateway/FW-DeepSeek-V4.1-Flash`.
+The `Microsoft.ApiManagement`, `Microsoft.CognitiveServices`, `Microsoft.Network`,
+`Microsoft.App`, and `Microsoft.Web` resource providers must already be registered.
+Automatic provider registration is disabled to avoid registering unrelated
+services.
 
-## Zed
+Review the plan before applying: it must contain only the resources listed above
+and local Terraform random/timing helpers. If an earlier deployment still has an
+application, extra models, or application-specific keys, this simplified
+configuration would remove them; do not apply such a destructive plan without
+separate approval.
 
-Zed 1.20.2 is installed from the official Windows winget package. Its user
-settings are at `%APPDATA%\Zed\settings.json`, with provider ID `azure-apim`
-and default model `FW-DeepSeek-V4.1-Flash`. The dedicated runtime key is stored
-in the user-scoped `AZURE_APIM_API_KEY` environment variable and is not written
-to the settings file or repository.
+## Endpoints and runtime key
 
-## DeepSeek monthly budget
+- `terraform output -raw ai_gateway_base_url` returns the OpenAI-compatible URL.
+- AI Gateway portal: <https://ai.gateway.azure.com>
+- `terraform output model_deployments` lists the three client-facing aliases.
+- `terraform output subnet_ids` lists the three dedicated shared-VNet subnets.
 
-The AI Gateway preview cost-limit policy counts spend per caller identity, not
-as one shared counter. Terraform partitions `deepseek_monthly_budget_usd`
-across the current runtime keys: 33.4% for app3, 33.3% for OpenCode, and 33.3%
-for Zed. The default for unallocated keys is effectively zero. Cost is
-estimated by the gateway from reported token categories and public model
-pricing; concurrent requests can briefly overshoot a limit.
+Read the sensitive key into memory rather than writing it into source or logs:
+
+```powershell
+$keys = terraform output -json model_access_keys | ConvertFrom-Json
+$gatewayKey = $keys.Phi
+```
+
+Terraform state and saved plans can contain secrets even when outputs are marked
+sensitive. Keep them protected and out of version control.

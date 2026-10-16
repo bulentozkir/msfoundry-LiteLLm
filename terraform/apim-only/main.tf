@@ -8,7 +8,6 @@ resource "random_string" "suffix" {
 locals {
   ai_gateway_name            = "aigw-foundry-${random_string.suffix.result}"
   foundry_name               = "fdry-aigw-${random_string.suffix.result}"
-  app_name                   = "foundry-chat3-${random_string.suffix.result}"
   ai_gateway_openai_base_url = "https://${local.ai_gateway_name}.azure-api.net/default/models/openai/v1"
   ai_gateway_workspace_id    = "${azapi_resource.ai_gateway.id}/workspaces/default"
 
@@ -52,23 +51,56 @@ resource "azurerm_resource_group" "main" {
   tags     = var.tags
 }
 
-resource "azurerm_cognitive_account" "foundry" {
-  name                          = local.foundry_name
-  location                      = azurerm_resource_group.main.location
-  resource_group_name           = azurerm_resource_group.main.name
-  kind                          = "AIServices"
-  sku_name                      = "S0"
-  custom_subdomain_name         = local.foundry_name
-  local_auth_enabled            = false
-  public_network_access_enabled = true
-  tags                          = var.tags
+resource "azapi_resource" "foundry" {
+  type      = "Microsoft.CognitiveServices/accounts@2025-04-01-preview"
+  name      = local.foundry_name
+  parent_id = azurerm_resource_group.main.id
+  location  = azurerm_resource_group.main.location
+  tags      = var.tags
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  body = {
+    kind = "AIServices"
+    sku = {
+      name = "S0"
+    }
+    properties = {
+      allowProjectManagement = true
+      customSubDomainName    = local.foundry_name
+      disableLocalAuth       = true
+      publicNetworkAccess    = "Disabled"
+      networkAcls = {
+        defaultAction       = "Deny"
+        bypass              = "None"
+        ipRules             = []
+        virtualNetworkRules = []
+      }
+      networkInjections = [
+        {
+          scenario                   = "agent"
+          subnetArmId                = azurerm_subnet.foundry_outbound.id
+          useMicrosoftManagedNetwork = false
+        }
+      ]
+    }
+  }
+
+  schema_validation_enabled = false
+  response_export_values = [
+    "properties.endpoint",
+    "properties.publicNetworkAccess",
+    "properties.networkInjections",
+  ]
 }
 
 resource "azurerm_cognitive_deployment" "model" {
   for_each = local.models
 
   name                   = each.value.deployment_name
-  cognitive_account_id   = azurerm_cognitive_account.foundry.id
+  cognitive_account_id   = azapi_resource.foundry.id
   version_upgrade_option = "NoAutoUpgrade"
 
   model {
@@ -80,28 +112,6 @@ resource "azurerm_cognitive_deployment" "model" {
   sku {
     name     = each.value.sku_name
     capacity = each.value.capacity
-  }
-}
-
-resource "azurerm_cognitive_deployment" "deepseek_user" {
-  for_each = {
-    for user_id in range(1, var.deepseek_user_count + 1) :
-    "user${user_id}" => "user${user_id}-${local.models.deepseek.deployment_name}"
-  }
-
-  name                   = each.value
-  cognitive_account_id   = azurerm_cognitive_account.foundry.id
-  version_upgrade_option = "NoAutoUpgrade"
-
-  model {
-    format  = local.models.deepseek.format
-    name    = local.models.deepseek.catalog_name
-    version = local.models.deepseek.version
-  }
-
-  sku {
-    name     = "DataZoneStandard"
-    capacity = var.deepseek_user_capacity
   }
 }
 
@@ -122,8 +132,13 @@ resource "azapi_resource" "ai_gateway" {
       capacity = 1
     }
     properties = {
-      publisherEmail = var.publisher_email
-      publisherName  = var.publisher_name
+      publisherEmail      = var.publisher_email
+      publisherName       = var.publisher_name
+      publicNetworkAccess = "Enabled"
+      virtualNetworkType  = "External"
+      virtualNetworkConfiguration = {
+        subnetResourceId = azurerm_subnet.ai_gateway_outbound.id
+      }
     }
   }
 
@@ -131,19 +146,29 @@ resource "azapi_resource" "ai_gateway" {
     "properties.gatewayUrl",
     "properties.frontend.defaultHostname",
     "properties.provisioningState",
+    "properties.publicNetworkAccess",
+    "properties.virtualNetworkType",
+    "properties.virtualNetworkConfiguration",
   ]
 
   schema_validation_enabled = false
 
   timeouts {
-    create = "10m"
-    update = "10m"
-    delete = "10m"
+    create = "45m"
+    update = "30m"
+    delete = "30m"
   }
+
+  depends_on = [
+    azurerm_network_security_rule.ai_gateway_outbound,
+    azurerm_subnet_network_security_group_association.ai_gateway_outbound,
+    azurerm_private_endpoint.foundry,
+    azurerm_private_dns_zone_virtual_network_link.foundry,
+  ]
 }
 
 resource "azurerm_role_assignment" "ai_gateway_foundry_user" {
-  scope                            = azurerm_cognitive_account.foundry.id
+  scope                            = azapi_resource.foundry.id
   role_definition_id               = "/subscriptions/${var.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/53ca6127-db72-4b80-b1b0-d745d6d5456d"
   principal_id                     = azapi_resource.ai_gateway.identity[0].principal_id
   principal_type                   = "ServicePrincipal"
@@ -152,6 +177,9 @@ resource "azurerm_role_assignment" "ai_gateway_foundry_user" {
 
 resource "time_sleep" "wait_for_foundry_rbac" {
   create_duration = "60s"
+  triggers = {
+    role_assignment_id = azurerm_role_assignment.ai_gateway_foundry_user.id
+  }
 
   depends_on = [azurerm_role_assignment.ai_gateway_foundry_user]
 }
@@ -168,7 +196,7 @@ resource "azapi_resource" "foundry_provider" {
       description = "Managed-identity connection to the Sweden Central Foundry account."
       foundry = {
         endpoint    = "https://${local.foundry_name}.services.ai.azure.com"
-        resourceIds = [azurerm_cognitive_account.foundry.id]
+        resourceIds = [azapi_resource.foundry.id]
         authentication = {
           kind = "ManagedIdentity"
           managedIdentity = {
@@ -206,32 +234,6 @@ resource "azapi_resource" "gateway_model" {
         }
       },
       each.value.api_format == null ? {} : { apiFormat = each.value.api_format },
-      each.key == "deepseek" ? {
-        policies = [
-          {
-            type       = "costLimit"
-            id         = "deepseek-monthly-budget"
-            amount     = 0.000000001
-            period     = "month"
-            counterKey = ["identity"]
-            scope      = "resource"
-            overrides = [
-              {
-                apiKeyResourceId = azapi_resource.app3_api_key.id
-                amount           = var.deepseek_monthly_budget_usd * 0.334
-              },
-              {
-                apiKeyResourceId = azapi_resource.opencode_api_key.id
-                amount           = var.deepseek_monthly_budget_usd * 0.333
-              },
-              {
-                apiKeyResourceId = azapi_resource.zed_api_key.id
-                amount           = var.deepseek_monthly_budget_usd * 0.333
-              },
-            ]
-          }
-        ]
-      } : {},
     )
   }
 
@@ -259,118 +261,30 @@ resource "azapi_resource" "model_alias" {
   schema_validation_enabled = false
 }
 
-resource "azapi_resource" "app3_api_key" {
+resource "azapi_resource" "runtime_api_key" {
+  for_each = local.models
+
   type      = "Microsoft.ApiManagement/service/apiKeys@2025-09-01-preview"
-  name      = "app3"
+  name      = each.value.resource_name
   parent_id = azapi_resource.ai_gateway.id
 
   body = {
     properties = {
-      displayName = "app3"
+      displayName = "${each.value.deployment_name} client"
     }
   }
 
   schema_validation_enabled = false
-  ignore_body_changes       = ["properties.displayName"]
 }
 
-resource "azapi_resource_action" "app3_api_key_secrets" {
+resource "azapi_resource_action" "runtime_api_key_secrets" {
+  for_each = local.models
+
   type        = "Microsoft.ApiManagement/service/apiKeys@2025-09-01-preview"
-  resource_id = azapi_resource.app3_api_key.id
+  resource_id = azapi_resource.runtime_api_key[each.key].id
   action      = "listSecrets"
   method      = "POST"
   body        = {}
 
   sensitive_response_export_values = ["primaryKey"]
-}
-
-resource "azapi_resource" "opencode_api_key" {
-  type      = "Microsoft.ApiManagement/service/apiKeys@2025-09-01-preview"
-  name      = "opencode"
-  parent_id = azapi_resource.ai_gateway.id
-
-  body = {
-    properties = {
-      displayName = "OpenCode"
-    }
-  }
-
-  schema_validation_enabled = false
-  ignore_body_changes       = ["properties.displayName"]
-}
-
-resource "azapi_resource_action" "opencode_api_key_secrets" {
-  type        = "Microsoft.ApiManagement/service/apiKeys@2025-09-01-preview"
-  resource_id = azapi_resource.opencode_api_key.id
-  action      = "listSecrets"
-  method      = "POST"
-  body        = {}
-
-  sensitive_response_export_values = ["primaryKey"]
-}
-
-resource "azapi_resource" "zed_api_key" {
-  type      = "Microsoft.ApiManagement/service/apiKeys@2025-09-01-preview"
-  name      = "zed"
-  parent_id = azapi_resource.ai_gateway.id
-
-  body = {
-    properties = {
-      displayName = "Zed"
-    }
-  }
-
-  schema_validation_enabled = false
-  ignore_body_changes       = ["properties.displayName"]
-}
-
-resource "azapi_resource_action" "zed_api_key_secrets" {
-  type        = "Microsoft.ApiManagement/service/apiKeys@2025-09-01-preview"
-  resource_id = azapi_resource.zed_api_key.id
-  action      = "listSecrets"
-  method      = "POST"
-  body        = {}
-
-  sensitive_response_export_values = ["primaryKey"]
-}
-
-resource "azurerm_service_plan" "app3" {
-  name                = "asp-chat3-${random_string.suffix.result}"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  os_type             = "Linux"
-  sku_name            = "B1"
-  tags                = var.tags
-}
-
-resource "azurerm_linux_web_app" "app3" {
-  name                = local.app_name
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_service_plan.app3.location
-  service_plan_id     = azurerm_service_plan.app3.id
-  https_only          = true
-
-  ftp_publish_basic_authentication_enabled       = false
-  webdeploy_publish_basic_authentication_enabled = false
-  public_network_access_enabled                  = true
-  tags                                           = var.tags
-
-  site_config {
-    always_on           = true
-    minimum_tls_version = "1.2"
-
-    application_stack {
-      dotnet_version = "10.0"
-    }
-  }
-
-  app_settings = {
-    "Apim__BaseUrl"       = local.ai_gateway_openai_base_url
-    "Apim__GatewayKey"    = azapi_resource_action.app3_api_key_secrets.sensitive_output.primaryKey
-    "Apim__Model"         = local.models.gpt5_4_mini.deployment_name
-    "Apim__PhiModel"      = local.models.phi.deployment_name
-    "Apim__DeepSeekModel" = local.models.deepseek.deployment_name
-  }
-
-  depends_on = [azapi_resource.model_alias]
 }

@@ -22,7 +22,7 @@ variable "location" {
 }
 
 variable "resource_group_name" {
-  description = "Resource group for the isolated app3, AI Gateway, and Foundry resources."
+  description = "Resource group for only the APIM AI Gateway and Foundry resources."
   type        = string
   default     = "rg-foundry-aigateway-sweden"
 }
@@ -39,44 +39,11 @@ variable "publisher_email" {
   default     = "bulento@microsoft.com"
 }
 
-variable "deepseek_monthly_budget_usd" {
-  description = "Combined monthly DeepSeek budget allocated across the current AI Gateway runtime keys."
-  type        = number
-  default     = 200
-
-  validation {
-    condition     = var.deepseek_monthly_budget_usd > 0 && var.deepseek_monthly_budget_usd <= 10000000
-    error_message = "deepseek_monthly_budget_usd must be greater than 0 and no more than 10,000,000."
-  }
-}
-
-variable "deepseek_user_count" {
-  description = "Number of additional per-user DeepSeek deployments in the existing Foundry account."
-  type        = number
-  default     = 10
-
-  validation {
-    condition     = var.deepseek_user_count >= 0 && var.deepseek_user_count <= 1000 && var.deepseek_user_count == floor(var.deepseek_user_count)
-    error_message = "deepseek_user_count must be a whole number between 0 and 1000."
-  }
-}
-
-variable "deepseek_user_capacity" {
-  description = "Data Zone Standard capacity per user deployment; one unit currently grants 1,000 TPM and 1 RPM for this model."
-  type        = number
-  default     = 25
-
-  validation {
-    condition     = var.deepseek_user_capacity >= 1 && var.deepseek_user_capacity == floor(var.deepseek_user_capacity)
-    error_message = "deepseek_user_capacity must be a positive whole number within the available regional model quota."
-  }
-}
-
 variable "tags" {
   description = "Tags applied to resources that support them."
   type        = map(string)
   default = {
-    architecture = "app3-apim-ai-gateway-foundry"
+    architecture = "apim-ai-gateway-foundry"
     environment  = "test"
     managed_by   = "terraform"
   }

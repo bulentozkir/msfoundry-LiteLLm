@@ -1,4 +1,92 @@
-# LiteLLM on Container Apps + Chat App2
+# APIM AI Gateway and three Foundry deployments
+
+Status: Ready for Validation
+
+## 1. Current scope and authorization - 2026-10-16
+
+Deploy only API Management in the `AIGateway` tier and one Microsoft Foundry
+account with the three model definitions from `terraform/apim-only/main.tf`.
+Use tenant `16b3c013-d300-468d-ac64-7eda0820b6d3`, subscription
+`fb7dfa70-78b9-4e56-8d2d-fa2eff765241`
+(`MCAPS-Hybrid-REQ-145403-2026-bulento`), Sweden Central, and resource group
+`rg-foundry-aigateway-sweden`. The user was unavailable for the confirmation
+form and instructed the assistant to choose pragmatic defaults.
+
+The resource group no longer exists in Azure. The local state is historical;
+refresh it during planning and reject any plan that deletes live Azure resources.
+Preserve unrelated working-tree changes and all other Terraform roots.
+
+## 2. Current architecture
+
+`client -> APIM AIGateway -> Microsoft Foundry model deployment`
+
+- One resource group, one APIM AIGateway, and one AIServices S0 account.
+- One shared `10.42.0.0/16` VNet with three /24 subnets: Foundry inbound
+  private endpoint, Foundry outbound injection (`Microsoft.App/environments`),
+  and gateway outbound integration (`Microsoft.Web/serverFarms`).
+- Public HTTPS access to AI Gateway; Foundry public access disabled, one
+  private endpoint, and three private DNS zones linked to the shared VNet.
+- Exactly `Gpt5.4mini`, `Phi`, and `FW-DeepSeek-V4.1-Flash`.
+- Preserve the model catalog names, versions, Global Standard SKUs, and
+  capacities from the existing main.tf, subject to live availability checks.
+- APIM system-assigned managed identity with Foundry User at the account scope.
+- One Foundry provider connection, three registered gateway models, three
+  aliases, and three independently managed runtime keys.
+- The user explicitly confirmed the `AIGateway` preview pricing tier.
+  Microsoft documents that keys in this tier are gateway-scoped, not
+  model-isolated subscriptions. Record this limitation rather than claiming
+  unsupported per-model authorization.
+- No App Service/plan, per-user deployments, LiteLLM, MLflow, database, Redis,
+  storage, monitoring, or agent/project. Only the explicitly requested
+  supporting private-network resources are added.
+
+## 3. Current recipe
+
+recipe.type: terraform
+
+Use only `terraform/apim-only`, its existing local backend, and a newly saved
+full plan. Do not apply any old saved plan or the legacy Terraform root.
+The deployment is direct Terraform; azd scaffolding is not applicable.
+
+## 4. Current security and cost boundaries
+
+Foundry local authentication stays disabled. Backend authentication uses the
+gateway identity over its private endpoint; client requests require a runtime
+key. Foundry injection is configured at creation for future agent/evaluation
+egress; no agents or capability hosts are provisioned. VNet injection alone
+is not an internet-egress firewall. Never print keys or
+full Terraform state/plan JSON. Do not create subscription-scoped role assignments
+or weaken inherited policies. APIM and model inference incur service charges.
+
+## 5. Current validation checklist
+
+- [ ] All validation checks pass
+  - [ ] Terraform/CLI authentication and required providers verified.
+  - [ ] Exact model versions, supported SKUs, and regional quota verified.
+  - [ ] Terraform formatting, validation, and initialization pass.
+  - [ ] Saved plan allows only the resource group, gateway, Foundry account,
+        three deployments, account-scoped access, gateway children, and required
+        VNet/subnets/NSGs/private endpoint/private DNS.
+  - [ ] No live Azure resource deletes/replacements or unrelated service creates.
+  - [ ] No unresolved template variables or application build requirements.
+  - [ ] Static RBAC verification confirms the gateway-to-Foundry relationship.
+
+## 6. Current recovery and verification
+
+On failure, diagnose only this deployment. Do not delete or purge existing or
+soft-deleted resources without separate approval. After apply, verify the live
+resource inventory, all three model deployments, account-scoped RBAC, authenticated
+gateway completions, rejection of unauthenticated requests, and a no-change plan.
+
+## 7. Current validation proof
+
+Pending validation of the minimal configuration and freshly saved Terraform plan.
+
+---
+
+# Historical deployment plans - not the current authorized scope
+
+## LiteLLM on Container Apps + Chat App2
 
 Status: Validated
 

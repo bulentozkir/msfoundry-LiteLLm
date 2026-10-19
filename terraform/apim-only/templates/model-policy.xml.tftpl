@@ -1,0 +1,66 @@
+<policies>
+  <inbound>
+    <cors allow-credentials="false">
+      <allowed-origins>
+        <origin>https://ms.portal.azure.com</origin>
+        <origin>https://portal.azure.com</origin>
+        <origin>@{
+          var origin = context.Request.Headers.GetValueOrDefault("Origin", "");
+          return System.Text.RegularExpressions.Regex.IsMatch(origin, @"\Ahttps://sandbox-[0-9]+\.reactblade(-ms)?\.portal\.azure\.net\z")
+            ? origin : "https://ms.portal.azure.com";
+        }</origin>
+      </allowed-origins>
+      <allowed-methods>
+        <method>POST</method>
+      </allowed-methods>
+      <allowed-headers>
+        <header>*</header>
+      </allowed-headers>
+    </cors>
+    <base />
+%{ if entra_client_id != null ~}
+    <validate-azure-ad-token tenant-id="${tenant_id}" header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="A valid gateway access token is required." output-token-variable-name="caller-token">
+      <audiences>
+        <audience>${entra_client_id}</audience>
+      </audiences>
+    </validate-azure-ad-token>
+    <choose>
+      <when condition="@{
+        var token = (Jwt)context.Variables[&quot;caller-token&quot;];
+        return !token.Claims.ContainsKey(&quot;roles&quot;) || !token.Claims[&quot;roles&quot;].Contains(&quot;${entra_role}&quot;);
+      }">
+        <return-response>
+          <set-status code="403" reason="Forbidden" />
+          <set-body>The caller is not assigned this model&apos;s invocation role.</set-body>
+        </return-response>
+      </when>
+    </choose>
+    <set-header name="Authorization" exists-action="delete" />
+%{ endif ~}
+    <validate-content unspecified-content-type-action="prevent" max-size="4194304" size-exceeded-action="prevent" errors-variable-name="request-body-errors">
+      <content type="application/json" validate-as="json" action="prevent" />
+    </validate-content>
+    <set-body>@{
+      var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
+      body["model"] = "${deployment_name}";
+      return body.ToString(Newtonsoft.Json.Formatting.None);
+    }</set-body>
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    <set-header name="api-key" exists-action="delete" />
+    <set-header name="x-ms-model-mesh-model-name" exists-action="delete" />
+    <set-header name="azureml-model-deployment" exists-action="delete" />
+    <rewrite-uri template="/chat/completions" copy-unmatched-params="false" />
+    ${format == "OpenAI" ? "" : "<set-query-parameter name=\"api-version\" exists-action=\"override\"><value>2024-05-01-preview</value></set-query-parameter>"}
+    <set-backend-service id="apim-generated-policy" backend-id="${backend_name}" />
+    <authentication-managed-identity resource="https://cognitiveservices.azure.com/" ignore-error="false" />
+  </inbound>
+  <backend>
+    <forward-request buffer-response="false" />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

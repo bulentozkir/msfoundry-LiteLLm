@@ -2,6 +2,10 @@ terraform {
   required_version = ">= 1.9.0"
 
   required_providers {
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 3.0"
+    }
     azapi = {
       source  = "Azure/azapi"
       version = "~> 2.12"
@@ -19,6 +23,10 @@ terraform {
       version = "~> 0.14"
     }
   }
+}
+
+provider "azuread" {
+  tenant_id = var.tenant_id
 }
 
 provider "azapi" {

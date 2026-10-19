@@ -1,39 +1,72 @@
-# App3 with Azure API Management AI Gateway
+# Azure API Management Standard v2 with private Foundry
 
 The active deployment is an isolated Sweden Central architecture:
 
 ```mermaid
 flowchart LR
-	U[Browser] --> C3[chat-client3 on App Service]
-	OC[OpenCode] --> A3[APIM AI Gateway tier]
-	C3 --> A3
-	A3 --> F[Microsoft Foundry]
+	U[Internet clients with model-scoped subscription keys] --> A3[APIM Standard v2 public HTTPS]
+	A3 --> V[Shared VNet outbound subnet]
+	V --> PE[Foundry private endpoint]
+	PE --> F[Microsoft Foundry private-only]
 	F --> D[FW-DeepSeek-V4.1-Flash]
 	F --> P[Phi]
 	F --> G[Gpt5.4mini]
 ```
 
-Azure Front Door is not used. App3 has a direct App Service HTTPS endpoint;
-app3 and OpenCode use separate AI Gateway runtime keys. The gateway uses its
+No application, Azure Front Door, database, or storage account is deployed.
+The gateway uses its
 system-assigned managed identity and the account-scoped Foundry User role to
-call model deployments without Foundry API keys.
+call model deployments over private networking without Foundry API keys.
 
 ## Active Terraform root
 
 [terraform/apim-only](terraform/apim-only) has its own state and deploys only:
 
-- `chat-client3` on Linux App Service with .NET 10
-- API Management in the public-preview `AIGateway` pricing tier
-- a Microsoft Foundry `AIServices` account
-- `Gpt5.4mini`, `Phi`, and `FW-DeepSeek-V4.1-Flash` gateway aliases
-- dedicated runtime keys for app3 and OpenCode
+- API Management in the `StandardV2` pricing tier, one unit
+- a private-only Microsoft Foundry `AIServices` account
+- exactly three deployments: `Gpt5.4mini`, `Phi`, and `FW-DeepSeek-V4.1-Flash`
+- three Foundry-linked backends and HTTPS model APIs, registered in AI Models,
+  with three independently managed API-scoped subscriptions
+- three additive Entra-protected model entrypoints on the same gateway, backed
+  by one single-tenant API registration with separate per-model app roles
+- three published, subscription-required products, each containing only its
+  matching model API; new product subscriptions require administrator approval
+  and are limited to one per developer per product
+- one shared VNet with separate inbound and outbound subnets for each service
+- Foundry and gateway private endpoints, private DNS, and supporting NSGs
+
+APIM stays publicly accessible to internet clients. Its separate inbound
+subnet additionally supports private clients. Foundry public access is disabled.
+The Foundry trusted Azure services network exception is enabled; authentication
+and RBAC permissions are still required.
+Each APIM subscription is scoped to one model API. Its key cannot call the other
+two APIs, and API policies validate and enforce the backend deployment rather
+than trusting a client-supplied model override. Client subscription keys are
+APIM credentials, not Foundry API keys; Foundry local authentication is disabled.
+Entra callers use separate `/entra/<model-api-id>/openai/v1` entrypoints with
+a gateway-audience bearer token and the matching model role. Existing key URLs
+and keys remain unchanged; the same three backend models are reused.
+
+The obsolete preview gateway has been deleted. Standard v2 uses the original
+four /24 subnets; no subnet resizing is performed. The temporary migration
+network is not part of the final configuration.
+
+The AI Models and APIs portal pages manage the same underlying APIs. Terraform
+associates the reserved `aimodel` tag with each model API so it appears in the
+AI-focused view as well as the general APIs view. This metadata does not create
+another Foundry deployment or replace subscription authorization.
 
 The requested DeepSeek name maps to the GA Foundry catalog model
-`DeepSeek-V4-Flash` version `2026-04-23`. A model-scoped AI Gateway cost-limit
-policy partitions a combined $200 monthly budget across app3, OpenCode, and Zed.
+`DeepSeek-V4-Flash` version `2026-04-23`. No extra per-user model deployments or
+application-specific cost policies are created.
 
-See [terraform/apim-only/README.md](terraform/apim-only/README.md) for deployment
-and local OpenCode details.
+See [terraform/apim-only/README.md](terraform/apim-only/README.md) for deployment,
+the four-subnet layout, private networking, and secure access-key retrieval.
+
+For administrator-led setup without Terraform, follow the
+[Azure Portal manual runbook](manualsteps-apimv2-foundry.md). It covers the
+ordered four-subnet, Foundry, Standard v2, managed-identity/RBAC, model API,
+AI Models, subscription, product, and verification steps.
 
 ## Retained legacy definitions
 

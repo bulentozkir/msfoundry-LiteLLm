@@ -3,38 +3,93 @@ output "resource_group_name" {
   value       = azurerm_resource_group.main.name
 }
 
-output "ai_gateway_base_url" {
-  description = "OpenAI-compatible base URL exposed by the APIM AI Gateway tier."
-  value       = local.ai_gateway_openai_base_url
-}
-
-output "ai_gateway_portal_url" {
-  description = "Dedicated AI Gateway management portal."
-  value       = "https://ai.gateway.azure.com"
-}
-
 output "foundry_account_id" {
   description = "ARM ID of the Microsoft Foundry account."
   value       = azapi_resource.foundry.id
 }
 
 output "model_deployments" {
-  description = "Client-facing deployment names routed through AI Gateway."
+  description = "Existing Foundry deployment names published through the model-scoped APIs."
   value       = [for model in local.models : model.deployment_name]
 }
 
-output "model_access_keys" {
-  description = "Three separate runtime keys, named by intended model. AIGateway preview keys are gateway-scoped, not model-isolated."
+output "apim_gateway_url" {
+  description = "Public HTTPS URL of the Standard v2 API Management instance."
+  value       = "https://${local.apim_name}.azure-api.net"
+}
+
+output "apim_portal_url" {
+  description = "Azure portal resource page for the Standard v2 instance."
+  value       = "https://portal.azure.com/#resource${azapi_resource.apim.id}/overview"
+}
+
+output "apim_model_base_urls" {
+  description = "OpenAI-compatible base URL for each model-scoped API."
+  value       = local.apim_model_base_urls
+}
+
+output "apim_model_endpoints" {
+  description = "Chat-completion endpoint for each model-scoped API."
+  value = {
+    for deployment, base_url in local.apim_model_base_urls :
+    deployment => "${base_url}/chat/completions"
+  }
+}
+
+output "apim_subscription_keys" {
+  description = "Primary API-scoped subscription keys; send as Ocp-Apim-Subscription-Key."
   value = {
     for model_id, model in local.models :
-    model.deployment_name => azapi_resource_action.runtime_api_key_secrets[model_id].sensitive_output.primaryKey
+    model.deployment_name => azurerm_api_management_subscription.model[model_id].primary_key
   }
   sensitive = true
 }
 
-output "runtime_key_scope" {
-  description = "Authorization scope of every runtime key in the AI Gateway preview tier."
-  value       = "gateway: every key can access all published models; per-model subscriptions are not supported"
+output "apim_entra_model_endpoints" {
+  description = "Token-only chat endpoints; existing subscription-key URLs are unchanged."
+  value = {
+    for deployment, base_url in local.entra_model_base_urls :
+    deployment => "${base_url}/chat/completions"
+  }
+}
+
+output "apim_entra_authentication" {
+  description = "Nonsecret Entra API identifiers, scope, and required per-model roles."
+  value = {
+    tenant_id                   = var.tenant_id
+    client_id                   = azuread_application.model_access.client_id
+    resource_uri                = local.entra_resource_uri
+    delegated_scope             = "${local.entra_resource_uri}/access_as_user"
+    service_principal_object_id = azuread_service_principal.model_access.object_id
+    model_roles = {
+      for model_id, model in local.models :
+      model.deployment_name => local.entra_model_roles[model_id]
+    }
+  }
+}
+
+output "apim_subscription_ids" {
+  description = "Standalone API-scoped subscription ARM IDs, one per model."
+  value = {
+    for model_id, model in local.models :
+    model.deployment_name => azurerm_api_management_subscription.model[model_id].id
+  }
+}
+
+output "apim_model_backend_ids" {
+  description = "Three model backend references to the existing private Foundry account."
+  value = {
+    for model_id, model in local.models :
+    model.deployment_name => azapi_resource.model_backend[model_id].id
+  }
+}
+
+output "apim_model_product_ids" {
+  description = "ARM IDs of the three published, model-specific APIM products."
+  value = {
+    for model_id, model in local.models :
+    model.deployment_name => azurerm_api_management_product.model[model_id].id
+  }
 }
 
 output "shared_vnet_id" {
@@ -43,10 +98,11 @@ output "shared_vnet_id" {
 }
 
 output "subnet_ids" {
-  description = "Foundry inbound/outbound and AI Gateway outbound subnets. Public gateway ingress needs no private-endpoint subnet."
+  description = "Four shared-VNet subnets: separate inbound and outbound networking for Foundry and AI Gateway."
   value = {
     foundry_inbound     = azurerm_subnet.foundry_inbound.id
     foundry_outbound    = azurerm_subnet.foundry_outbound.id
     ai_gateway_outbound = azurerm_subnet.ai_gateway_outbound.id
+    ai_gateway_inbound  = azurerm_subnet.ai_gateway_inbound.id
   }
 }

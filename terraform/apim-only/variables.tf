@@ -39,6 +39,21 @@ variable "publisher_email" {
   default     = "bulento@microsoft.com"
 }
 
+variable "entra_model_principal_ids" {
+  description = "Explicit per-model Entra role assignments to user, group, or service-principal object IDs. Omitted models grant no access."
+  type        = map(set(string))
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for model_id, principal_ids in var.entra_model_principal_ids :
+      contains(["gpt5_4_mini", "phi", "deepseek"], model_id) &&
+      alltrue([for id in principal_ids : can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", id))])
+    ])
+    error_message = "Use only gpt5_4_mini, phi, or deepseek with valid Entra principal object UUIDs."
+  }
+}
+
 variable "tags" {
   description = "Tags applied to resources that support them."
   type        = map(string)

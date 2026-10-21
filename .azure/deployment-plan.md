@@ -2,6 +2,267 @@
 
 Status: Deployed
 
+## Stage 10: reversible AI Gateway test-tier replacement - 2026-10-20
+
+### Scope, context, and recipe
+
+- The user explicitly requests replacing the current Standard v2 gateway with
+  the AI Gateway pricing tier for lower test-environment cost, preserving a
+  separate Standard v2 Terraform configuration for future switches.
+- Recipe: standalone Terraform, without azd, using the existing local backend
+  in `terraform/apim-only` and a separate local backend in
+  `terraform/apim-ai-gateway`. Do not copy or migrate state between the roots.
+- Live context: tenant `16b3c013-d300-468d-ac64-7eda0820b6d3`, subscription
+  `fb7dfa70-78b9-4e56-8d2d-fa2eff765241`
+  (`MCAPS-Hybrid-REQ-145403-2026-bulento`), Sweden Central, resource group
+  `rg-foundry-aigateway-sweden`. The confirmation form returned that the user
+  is unavailable and directed a pragmatic choice. Reuse this existing context
+  under the user's repeated explicit replacement request.
+- Current gateway: `apim-foundry-8ps1sz`, StandardV2 capacity 1, Succeeded.
+  Its available-SKUs endpoint does not advertise AIGateway. Provision a new
+  `aigw-test-8ps1sz` gateway rather than attempting an unsupported SKU patch.
+
+### Proposed implementation and state ownership
+
+- Retain the existing root as owner of Foundry, exactly three unchanged model
+  deployments, the VNet, existing subnets, DNS, and Entra application/roles.
+  Add an explicit persistent Standard-gateway enable/disable switch, using
+  moved blocks to preserve existing singleton resource addresses.
+- Export nonsecret foundation connection metadata. The new root reads that
+  local state and owns only the AI Gateway, its account-scoped Foundry User
+  assignment, provider/model/alias registrations, runtime keys, private
+  endpoint, and gateway-specific supporting network resources.
+- The user explicitly permits deletion and recreation with the same settings.
+  Use a maintenance-window replacement and retain the original four /24
+  subnets, including `10.42.2.0/24` for outbound integration. Do not create an
+  extra subnet or keep two gateways billed.
+- Validate both roots and review the Standard-disabled plan before deleting
+  anything. Disable Standard v2 and remove only its gateway-specific resources,
+  then plan and create the AI Gateway on the now-free outbound subnet.
+  Each root must reject provisioning while another gateway occupies that subnet.
+- Preserve the Entra registration and assignments for a future Standard
+  deployment; they are not an authentication surface on the AI Gateway.
+- Returning to Standard v2 also requires deleting the active gateway before
+  creating the other tier on the shared outbound subnet. Do not promise an
+  instantaneous tier switch, preserved keys,
+  or availability of a deleted gateway name without checking Azure.
+- Update both root READMEs, the repository README, and the manual portal
+  runbook. The AI Gateway runbook must use the standalone AI Gateway portal,
+  runtime keys, and model imports, not unsupported Standard v2 products,
+  subscriptions, arbitrary XML API policies, or Entra-only facade APIs.
+
+### Compatibility, security, and cost approval
+
+- AI Gateway is a public preview with no SLA. Regional support and the
+  subscription SKU listing both include Sweden Central.
+- Clients change to the new gateway's
+  `/default/models/openai/v1/chat/completions` endpoint and send `api-key`.
+  Every runtime key can invoke all published models. Per-model subscription
+  isolation and the existing Entra-only entrypoints are not carried over.
+- Preserve Foundry public access Disabled, local authentication disabled,
+  trusted-services bypass AzureServices, private DNS, model versions/capacity,
+  and managed-identity authentication with account-scoped Foundry User only.
+- Live retail pricing: Standard v2 first unit USD 1.25/hour, approximately
+  USD 912.50 per 730-hour month; AI Gateway request meter USD 0 per 10K during
+  preview. This is not a guarantee of future or contracted pricing. Foundry,
+  private endpoints, DNS, and other applicable charges remain.
+- The user repeatedly requested the AI Gateway tier after the access differences
+  were explained, and explicitly authorized deleting and recreating the current
+  gateway. The confirmation form again returned unavailable with instructions to
+  choose pragmatically. Proceed with the requested test-tier replacement,
+  documenting the preview access limitations, and delete only the
+  Standard gateway, its child APIs/products/subscriptions/policies, its
+  Foundry role assignment, and its private endpoint. No foundation resource,
+  model deployment, or Entra application is approved for deletion.
+
+### Stage 10 Section 7: Validation Proof
+
+Phase 1 (Standard gateway removal) checks completed on 2026-10-20. Plan
+inspection finished at 17:45 +03:00; final test/settings checks at 17:47 +03:00.
+Historical stages below are not proof for this replacement.
+
+- Terraform 1.15.8 on windows_amd64 and Azure CLI authentication confirmed.
+- Both roots pass native initialization, formatting, and validation. Existing
+  provider versions are reused; the new root has signed Windows/Linux locks.
+- Eight focused Standard/Entra/switch tests and four AI Gateway tests pass.
+  Tests explicitly select their intended enabled profile, independently of
+  the persisted local deployment switches.
+- PowerShell AST checks and manual JSON/Python/local-link checks pass.
+  State access succeeds with 78 addresses before removal. Both ignored
+  `gateway.auto.tfvars.json` files parse; the unresolved-template scan is clean.
+- The prescribed preflight wrapper was executed and reproduced its existing
+  `$Args` automatic-variable defect: five Terraform usage errors, not
+  infrastructure failures. Its actual init/fmt/validate/plan/state checks were
+  run successfully as explicit native commands. No application build is
+  applicable to this infrastructure-only change.
+- Refreshed enabled baseline: **0 creates, 0 updates, 0 deletes**, five safe
+  singleton state-address moves, plus the nonsecret foundation output.
+  SHA256: `B7534A2F0C311B8D84C1D17BFE656F514B82AB6493F85D0C10638B74AE4BAA35`.
+- Reviewed saved removal plan: **0 creates, 0 updates, 38 deletes**. Every
+  changed address was checked against an exact allowlist covering only the
+  Standard gateway, gateway children, private endpoint, Foundry role, and timer.
+  All Foundation and Entra resources are no-op.
+  SHA256: `E54DE00FF1F1FFCE7C7DB7C3B3742AED6671B807AEABFF3C6F73EB585CACF4B2`.
+- Static RBAC verification: the AI root assigns only Foundry User
+  `53ca6127-db72-4b80-b1b0-d745d6d5456d`, at the existing account scope, to
+  the new system-assigned gateway identity. No broad role or client secret
+  is added; Foundry authentication/network settings remain owned and unchanged
+  by the foundation.
+- Live permissions for the exact removal/create/network/RBAC actions pass.
+  AIGateway Sweden Central eligibility and the replacement name are confirmed.
+  Local state was backed up in the ignored `.artifacts` directory without
+  printing credentials.
+
+This proof authorizes only the reviewed Standard removal as the first apply.
+After subnet release, generate and validate a fresh AI Gateway creation plan,
+record its exact actions/hash here, and only then apply it. Do not reuse a
+historical AI Gateway plan or destroy the foundation root.
+
+### Phase 1 result and Phase 2 creation proof
+
+- The reviewed Standard removal applied successfully:
+  **0 added, 0 changed, 38 destroyed**. The API Management service deletion
+  completed in 1m4s. No foundation or directory resources were changed.
+- A PowerShell post-check initially used the member collection's `.Count`
+  incorrectly and reported a false assertion after Terraform succeeded.
+  Re-reading with `@(...).Count` verified the persisted flag is false and all
+  three models remain. No infrastructure rollback or repeated removal was needed.
+- Live Azure lists no remaining gateway in the resource group. The retained
+  outbound subnet still has Microsoft.Web/serverFarms delegation and has no
+  IP configurations or service association links, so it is available.
+- The separate AI root reads the newly persisted foundation output and passes
+  `terraform validate`. Its fresh creation plan was reviewed at
+  **2026-10-20 17:59 +03:00**.
+- Creation plan: **13 creates, 0 updates, 0 deletes**, checked against an exact
+  address allowlist. It contains only the new gateway, provider, three model
+  registrations, three aliases, one runtime key and secret action, one
+  account-scoped Foundry User assignment, timer, and gateway private endpoint.
+- Verified the planned `AIGateway` SKU, original outbound subnet, and role
+  definition/scope. This root manages no Foundry account/deployment, shared
+  VNet/subnet/NSG/DNS, or Entra application.
+- Reviewed creation-plan SHA256:
+  `9F80465B41D6B0D1B700BAC3EE54A4B571B058B2C19D832AFEC4DA1D6A8F3F9D`.
+- Phase 2 apply is authorized only for this newly reviewed saved creation plan.
+  Runtime, live RBAC, private endpoint configuration, exclusivity, and both
+  roots' final convergence remain mandatory after apply.
+
+- [x] Read live Azure context, gateway SKU/state, subnets, and resource ownership.
+- [x] Verify official AI Gateway networking, runtime key scope, portal, and pricing.
+- [x] Confirm scope: explicit user replacement/deletion instructions; the form
+      returned unavailable and directed pragmatic use of the existing context.
+- [x] Implement separate-root configuration, reversible switches, tests, and docs.
+- [x] Run formatting, validation, focused mocked tests, and reviewed saved plans
+      for the Standard-removal stage.
+- [x] Record plan hashes, exact actions, and current validation timestamps.
+- [x] Deploy and verify three model completions, streaming, runtime-key rejection,
+      private networking configuration, live RBAC, and final convergence.
+
+### Preparation evidence
+
+- Implemented the separate root, read-only foundation connection output,
+  persistent enable/disable settings, safe singleton moved blocks, and
+  occupancy guards. The Standard guard is a checked discovery data source
+  that the gateway depends on; the AI guard checks the same live subnet.
+- Both roots pass native `terraform validate`. The AI root's four mocked
+  tests and the Standard root's eight focused regression runs pass.
+- A fresh mocked Standard resource group defers live gateway discovery until
+  apply; plan-only mock expectations cannot prove that guard. The live
+  `Test-TierExclusivity.ps1` test will require the exact conflict diagnostic
+  after the replacement. No live apply was used to debug mocked tests.
+- Native PowerShell AST checks pass for the shared helpers and both new
+  operational tests. Local Markdown links, JSON code blocks, and the new
+  manual's Python sample parse successfully.
+- The original Standard manual is retained as `manualsteps-apimv2-standard.md`.
+  The requested original filename now documents the actual AI Gateway portal,
+  key scope, model import, private networking, and administrator acceptance.
+- Reused AzureRM 5.6.0, AzAPI 2.12.0, and Time 0.14.2. The new lock file
+  includes official signed-provider checksums for Windows and Linux amd64.
+- The subscription advertises management API `2025-09-01-preview`; a read-only
+  request for documentation's recommended `2026-05-01-preview` failed with
+  NoRegisteredProviderFound. Pin the verified version, not an unavailable API.
+- Effective live permissions confirm gateway write/delete, private endpoint
+  write/delete, subnet join, and role assignment write/delete.
+- `az quota list` required restoring its missing extension, then returned
+  BadRequest for Microsoft.ApiManagement. Live inventory contains one Standard
+  gateway; the replacement ends with one gateway and requests no new Foundry
+  capacity. The subscription's AIGateway SKU permits capacity 1 in Sweden Central.
+- The refreshed enabled-Standard baseline proved zero managed-resource changes
+  before the gateway-only removal plan was prepared and applied.
+
+### Validation steps
+
+- [x] All Phase 1 validation checks pass
+  - [x] Terraform and Azure CLI installed; current CLI context and effective
+        gateway/network/RBAC permissions verified.
+  - [x] Initialize both roots without upgrading existing provider versions.
+  - [x] Terraform formatting and syntax validation for both roots.
+  - [x] Eight Standard/Entra/switch mock runs and four AI Gateway mock runs pass.
+  - [x] Parse operational PowerShell scripts, manual JSON/Python examples, and
+        local documentation links.
+  - [x] Fresh enabled baseline proves no managed-resource changes; disabled
+        saved plan contains exactly gateway-owned deletions and no foundation
+        or Entra changes.
+  - [x] State backend access, unresolved-template scan, and optional tfvars
+        JSON syntax checks.
+  - [x] Static role verification confirms only account-scoped Foundry User
+        from the replacement gateway identity, with no broader grants.
+  - [x] Record current commands, results, timestamps, and saved-plan hashes
+        before changing plan status to Validated.
+
+The first baseline exposed pre-existing Entra drift: the tenant had populated
+`service_management_reference`, and Terraform proposed clearing it. Preserve
+that externally maintained metadata with a narrow lifecycle ignore; do not
+apply that unrelated directory change. Re-run the baseline and exact removal
+plan after this preservation fix.
+
+### Sources
+
+- https://learn.microsoft.com/azure/api-management/ai-gateway-overview
+- https://learn.microsoft.com/azure/api-management/quickstart-ai-gateway-create
+- https://learn.microsoft.com/azure/api-management/ai-gateway-configure-private-networking
+- https://learn.microsoft.com/azure/api-management/ai-gateway-govern-secure-assets
+- Live ARM SKU/available-SKU queries and Azure Retail Pricing API, 2026-10-20.
+
+### Final deployment and acceptance - 2026-10-20
+
+- The AI creation plan applied at **18:07 +03:00**:
+  **13 added, 0 changed, 0 destroyed**. Standard v2 was already removed.
+  Exactly one active gateway remains in the resource group:
+  `aigw-test-8ps1sz`, SKU AIGateway, provisioning Succeeded, public access Enabled,
+  integrated with the original `snet-aigw-outbound`.
+- Runtime verification passed at **18:13 +03:00**:
+  all three exact model names returned valid nonempty chat completions and
+  complete SSE streams using the same runtime key. Missing key, invalid key,
+  and subscription-key-header-only requests returned 401. An unknown model
+  returned 404. No credential values were printed or put in source.
+- Live role verification passed: new principal
+  `42b14c5b-1915-4625-8334-2dec581e2fa3` has exactly one Foundry User assignment,
+  scoped to `fdry-aigw-8ps1sz`; no broader inherited runtime roles were found.
+- Live account/model/network checks passed: Foundry remains Succeeded, public
+  access Disabled, local auth disabled, trusted-services bypass AzureServices,
+  and the original agent network injection retained. Exactly the original
+  three model names/catalog versions/GlobalStandard capacities 1/1/250 remain.
+  The original VNet and all four /24 subnets/delegations are unchanged.
+- The new Gateway private endpoint is Approved/Succeeded in
+  `snet-aigw-inbound`. Its NIC IP and the private DNS A record both equal
+  `10.42.3.4`. The normal gateway hostname is retained for TLS.
+- The live inactive-root exclusivity test passed: an attempted Standard-enabled
+  plan is blocked by the actual subnet-occupancy diagnostic, without provisioning
+  a second gateway.
+- Both fresh `terraform plan -detailed-exitcode` checks returned **0 / no changes**:
+  foundation/Standard root at **18:14 +03:00**, AI Gateway root at **18:19 +03:00**.
+  Persistent ignored switches remain Standard=false and AI Gateway=true.
+- Worktree whitespace checks pass. Unrelated pre-existing generated .NET
+  changes were left untouched. Both manual tier runbooks and the two-root
+  switching instructions are retained.
+
+Private-client limitation: a credential-free, certificate-validating connection
+probe to the known private endpoint timed out from this workstation at
+**18:22 +03:00**. Private endpoint/DNS configuration is verified, but an
+authenticated request from an existing VNet/VPN-connected client remains
+unverified. No public Foundry access, TLS bypass, extra VM, or network-policy
+weakening was introduced to work around that client-network limitation.
+
 ## Stage 9: additive Entra ID access - 2026-10-17
 
 ### Scope and decisions

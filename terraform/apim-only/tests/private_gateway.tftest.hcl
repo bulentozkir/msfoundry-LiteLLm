@@ -1,3 +1,7 @@
+variables {
+  standard_gateway_enabled = true
+}
+
 mock_provider "azurerm" {}
 
 mock_provider "azuread" {
@@ -8,7 +12,13 @@ mock_provider "azuread" {
   }
 }
 
-mock_provider "azapi" {}
+mock_provider "azapi" {
+  mock_data "azapi_resource_list" {
+    defaults = {
+      output = { value = [] }
+    }
+  }
+}
 
 mock_provider "random" {
   mock_resource "random_string" {
@@ -25,10 +35,10 @@ run "private_foundry_public_standard_apim" {
 
   assert {
     condition = (
-      azapi_resource.apim.body.sku.name == "StandardV2" &&
-      azapi_resource.apim.body.properties.publicNetworkAccess == "Enabled" &&
-      azapi_resource.apim.body.properties.virtualNetworkType == "External" &&
-      contains(keys(azapi_resource.apim.body.properties.virtualNetworkConfiguration), "subnetResourceId")
+      azapi_resource.apim[0].body.sku.name == "StandardV2" &&
+      azapi_resource.apim[0].body.properties.publicNetworkAccess == "Enabled" &&
+      azapi_resource.apim[0].body.properties.virtualNetworkType == "External" &&
+      contains(keys(azapi_resource.apim[0].body.properties.virtualNetworkConfiguration), "subnetResourceId")
     )
     error_message = "Use Standard v2 APIM with public ingress and outbound integration into its dedicated shared-VNet subnet."
   }
@@ -80,7 +90,7 @@ run "private_foundry_public_standard_apim" {
       length(azurerm_private_dns_zone.foundry) == 3 &&
       length(azurerm_private_dns_zone_virtual_network_link.foundry) == 3 &&
       azurerm_private_dns_zone.ai_gateway.name == "privatelink.azure-api.net" &&
-      contains(azurerm_private_endpoint.apim.private_service_connection[0].subresource_names, "Gateway")
+      contains(azurerm_private_endpoint.apim[0].private_service_connection[0].subresource_names, "Gateway")
     )
     error_message = "Use four separate subnets in one shared VNet, the Foundry private DNS zones, and a Gateway private endpoint with its private DNS zone."
   }

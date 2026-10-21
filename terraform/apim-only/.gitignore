@@ -7,3 +7,4 @@ tfplan*
 .artifacts/
 terraform.tfvars
 *.auto.tfvars
+*.auto.tfvars.json

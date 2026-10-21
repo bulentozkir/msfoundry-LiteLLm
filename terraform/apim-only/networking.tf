@@ -262,6 +262,8 @@ resource "azurerm_private_dns_zone_virtual_network_link" "ai_gateway" {
 }
 
 resource "azurerm_private_endpoint" "apim" {
+  count = var.standard_gateway_enabled ? 1 : 0
+
   name                = "pe-apim-inbound-${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
@@ -270,7 +272,7 @@ resource "azurerm_private_endpoint" "apim" {
 
   private_service_connection {
     name                           = "apim-inbound"
-    private_connection_resource_id = azapi_resource.apim.id
+    private_connection_resource_id = azapi_resource.apim[0].id
     subresource_names              = ["Gateway"]
     is_manual_connection           = false
   }

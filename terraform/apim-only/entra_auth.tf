@@ -1,7 +1,7 @@
 data "azuread_client_config" "current" {}
 
 locals {
-  entra_resource_uri = "api://${var.tenant_id}/${local.apim_name}"
+  entra_resource_uri = "api://${var.tenant_id}/${local.apim_identity_name}"
   entra_role_values = {
     gpt5_4_mini = "Model.Gpt.Invoke"
     phi         = "Model.Phi.Invoke"
@@ -23,13 +23,13 @@ locals {
     }
   ]...)
   entra_model_base_urls = {
-    for model_id, model in local.models :
+    for model_id, model in local.standard_models :
     model.deployment_name => "https://${local.apim_name}.azure-api.net/entra/${model.resource_name}/openai/v1"
   }
 }
 
 resource "azuread_application" "model_access" {
-  display_name     = "${local.apim_name}-model-access"
+  display_name     = "${local.apim_identity_name}-model-access"
   identifier_uris  = [local.entra_resource_uri]
   sign_in_audience = "AzureADMyOrg"
   owners           = [data.azuread_client_config.current.object_id]
@@ -58,6 +58,11 @@ resource "azuread_application" "model_access" {
       enabled              = true
     }
   }
+
+  lifecycle {
+    # Preserve service-management metadata maintained outside this deployment.
+    ignore_changes = [service_management_reference]
+  }
 }
 
 resource "azuread_service_principal" "model_access" {
@@ -81,11 +86,11 @@ resource "azuread_app_role_assignment" "model" {
 }
 
 resource "azurerm_api_management_api" "entra_model" {
-  for_each = local.models
+  for_each = local.standard_models
 
   name                  = "${each.value.resource_name}-entra"
   resource_group_name   = azurerm_resource_group.main.name
-  api_management_name   = azapi_resource.apim.name
+  api_management_name   = azapi_resource.apim[0].name
   revision              = "1"
   display_name          = "${each.value.deployment_name} (Entra ID)"
   path                  = "entra/${each.value.resource_name}/openai/v1"
@@ -109,10 +114,10 @@ resource "azurerm_api_management_api" "entra_model" {
 }
 
 resource "azurerm_api_management_api_policy" "entra_model" {
-  for_each = local.models
+  for_each = local.standard_models
 
   api_name            = azurerm_api_management_api.entra_model[each.key].name
-  api_management_name = azapi_resource.apim.name
+  api_management_name = azapi_resource.apim[0].name
   resource_group_name = azurerm_resource_group.main.name
   xml_content = templatefile("${path.module}/templates/model-policy.xml.tftpl", {
     deployment_name = each.value.deployment_name
@@ -127,10 +132,10 @@ resource "azurerm_api_management_api_policy" "entra_model" {
 }
 
 resource "azurerm_api_management_api_tag" "entra_model" {
-  for_each = local.models
+  for_each = local.standard_models
 
   api_id = trimsuffix(azurerm_api_management_api.entra_model[each.key].id, ";rev=${azurerm_api_management_api.entra_model[each.key].revision}")
-  name   = azurerm_api_management_tag.ai_model.name
+  name   = azurerm_api_management_tag.ai_model[0].name
 
   depends_on = [azurerm_api_management_api_policy.entra_model]
 }

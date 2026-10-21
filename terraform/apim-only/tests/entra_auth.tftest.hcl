@@ -1,5 +1,15 @@
+variables {
+  standard_gateway_enabled = true
+}
+
 mock_provider "azurerm" {}
-mock_provider "azapi" {}
+mock_provider "azapi" {
+  mock_data "azapi_resource_list" {
+    defaults = {
+      output = { value = [] }
+    }
+  }
+}
 mock_provider "time" {}
 
 mock_provider "azuread" {

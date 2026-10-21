@@ -5,7 +5,7 @@ function Get-TerraformOutput {
 
     $raw = terraform output -json $Name
     if ($LASTEXITCODE -ne 0) {
-        throw "Cannot read Terraform output '$Name'. Run this script from the apim-only Terraform root after apply."
+        throw "Cannot read Terraform output '$Name'. Run this script from the relevant Terraform root after apply."
     }
     return $raw | ConvertFrom-Json -AsHashtable
 }

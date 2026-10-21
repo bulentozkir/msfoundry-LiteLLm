@@ -1,5 +1,5 @@
 variable "subscription_id" {
-  description = "Azure subscription that receives the isolated APIM AI Gateway deployment."
+  description = "Azure subscription for the shared Foundry foundation and optional Standard v2 gateway."
   type        = string
   default     = "fb7dfa70-78b9-4e56-8d2d-fa2eff765241"
 }
@@ -11,7 +11,7 @@ variable "tenant_id" {
 }
 
 variable "location" {
-  description = "Azure region for the APIM AI Gateway preview architecture."
+  description = "Azure region for the shared Foundry and gateway architecture."
   type        = string
   default     = "swedencentral"
 
@@ -22,7 +22,7 @@ variable "location" {
 }
 
 variable "resource_group_name" {
-  description = "Resource group for only the APIM AI Gateway and Foundry resources."
+  description = "Resource group for the shared Foundry foundation and selected gateway tier."
   type        = string
   default     = "rg-foundry-aigateway-sweden"
 }
@@ -37,6 +37,23 @@ variable "publisher_email" {
   description = "Publisher email required by the API Management resource."
   type        = string
   default     = "bulento@microsoft.com"
+}
+
+variable "standard_gateway_enabled" {
+  description = "Enable the Standard v2 gateway and its children. Disable before enabling the separate AI Gateway root; Foundry, shared networking, and Entra registrations are retained."
+  type        = bool
+  default     = true
+}
+
+variable "gateway_name" {
+  description = "Optional Standard v2 gateway name when recreating a deleted service. Entra registration identifiers remain stable."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.gateway_name == null || can(regex("^[a-zA-Z]([a-zA-Z0-9-]{0,48}[a-zA-Z0-9])?$", var.gateway_name))
+    error_message = "Use a 1-50 character APIM name starting with a letter and ending with a letter or digit."
+  }
 }
 
 variable "entra_model_principal_ids" {

@@ -1,6 +1,12 @@
 # APIM Standard v2 AI gateway + private Microsoft Foundry
 
-This isolated Terraform root deploys only:
+This root owns the shared foundation and the optional **Standard v2** gateway.
+The alternative [AI Gateway pricing-tier root](../apim-ai-gateway/README.md)
+reuses its foundation without sharing writable state or duplicating resources.
+Use the [tier-switching procedure](../apim-ai-gateway/README.md#switching-tiers)
+to select one active gateway. Never destroy this root merely to change tiers.
+
+With `standard_gateway_enabled = true` (the default), this root deploys:
 
 - one resource group
 - one API Management instance in the `StandardV2` pricing tier, capacity 1
@@ -17,11 +23,24 @@ This isolated Terraform root deploys only:
 
 It does not deploy App Service, App Service plans, per-user model deployments,
 LiteLLM, MLflow, databases, Redis, storage accounts, monitoring, agents, or projects.
-Other Terraform roots and existing client configurations are not used or changed.
+Other legacy Terraform roots are not used. Disabling `standard_gateway_enabled`
+removes only the Standard gateway, its children, its private endpoint, its
+Foundry role assignment, and the RBAC timer. Foundry, all three deployments,
+the four-subnet network/DNS foundation, and Entra objects remain managed here.
+Gateway endpoints/keys are no longer advertised while it is disabled.
 
-The obsolete `AIGateway` preview instance has been deleted. Standard v2 uses
-the original outbound subnet; the temporary fifth migration subnet is not part
-of this configuration. All four retained subnet prefixes remain /24.
+The separate AI Gateway root uses the same outbound subnet only after the
+Standard gateway has been removed. All four retained subnet prefixes remain
+/24; no temporary migration subnet is needed. The Standard-specific API,
+product, key, and Entra instructions below apply only while Standard is enabled.
+
+Both roots have independent local state and persistent ignored
+`gateway.auto.tfvars.json` settings. Do not copy state or enable both gateways.
+An optional `gateway_name` supports an approved new name when soft-delete
+reserves a previous one, without changing the retained Entra audience/roles.
+The [Standard portal runbook](../../manualsteps-apimv2-standard.md) is the
+manual fallback; [the other runbook](../../manualsteps-apimv2-foundry.md)
+describes the AI Gateway pricing tier and its different runtime-key semantics.
 
 ## Target and models
 

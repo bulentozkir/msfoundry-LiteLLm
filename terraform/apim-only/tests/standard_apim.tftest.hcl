@@ -1,3 +1,7 @@
+variables {
+  standard_gateway_enabled = true
+}
+
 mock_provider "azurerm" {}
 
 mock_provider "azuread" {
@@ -8,7 +12,13 @@ mock_provider "azuread" {
   }
 }
 
-mock_provider "azapi" {}
+mock_provider "azapi" {
+  mock_data "azapi_resource_list" {
+    defaults = {
+      output = { value = [] }
+    }
+  }
+}
 
 mock_provider "random" {
   mock_resource "random_string" {
@@ -58,11 +68,11 @@ run "standard_v2_model_subscriptions" {
 
   assert {
     condition = (
-      azapi_resource.apim.body.sku.name == "StandardV2" &&
-      azapi_resource.apim.body.sku.capacity == 1 &&
-      azapi_resource.apim.body.properties.publicNetworkAccess == "Enabled" &&
-      azapi_resource.apim.body.properties.virtualNetworkType == "External" &&
-      azapi_resource.apim.identity[0].type == "SystemAssigned"
+      azapi_resource.apim[0].body.sku.name == "StandardV2" &&
+      azapi_resource.apim[0].body.sku.capacity == 1 &&
+      azapi_resource.apim[0].body.properties.publicNetworkAccess == "Enabled" &&
+      azapi_resource.apim[0].body.properties.virtualNetworkType == "External" &&
+      azapi_resource.apim[0].identity[0].type == "SystemAssigned"
     )
     error_message = "Use Standard v2 with one unit, public ingress, outbound VNet integration, and managed identity."
   }
@@ -79,7 +89,7 @@ run "standard_v2_model_subscriptions" {
 
   assert {
     condition = (
-      azurerm_api_management_tag.ai_model.name == "aimodel" &&
+      azurerm_api_management_tag.ai_model[0].name == "aimodel" &&
       alltrue([
         for model_id in keys(local.models) :
         azurerm_api_management_api_tag.model[model_id].name == "aimodel" &&
@@ -184,8 +194,8 @@ run "standard_v2_model_subscriptions" {
 
   assert {
     condition = (
-      azurerm_role_assignment.apim_foundry_user.principal_type == "ServicePrincipal" &&
-      endswith(azurerm_role_assignment.apim_foundry_user.role_definition_id, "/53ca6127-db72-4b80-b1b0-d745d6d5456d") &&
+      azurerm_role_assignment.apim_foundry_user[0].principal_type == "ServicePrincipal" &&
+      endswith(azurerm_role_assignment.apim_foundry_user[0].role_definition_id, "/53ca6127-db72-4b80-b1b0-d745d6d5456d") &&
       azapi_resource.foundry.body.properties.disableLocalAuth &&
       alltrue([
         for backend in azapi_resource.model_backend :
@@ -200,7 +210,7 @@ run "standard_v2_model_subscriptions" {
       contains(azurerm_subnet.ai_gateway_outbound.address_prefixes, "10.42.2.0/24") &&
       azurerm_subnet.ai_gateway_outbound.delegation[0].service_delegation[0].name == "Microsoft.Web/serverFarms" &&
       contains(azurerm_network_security_rule.foundry_private_https.source_address_prefixes, "10.42.2.0/24") &&
-      contains(azurerm_private_endpoint.apim.private_service_connection[0].subresource_names, "Gateway") &&
+      contains(azurerm_private_endpoint.apim[0].private_service_connection[0].subresource_names, "Gateway") &&
       azapi_resource.foundry.body.properties.publicNetworkAccess == "Disabled" &&
       azapi_resource.foundry.body.properties.disableLocalAuth &&
       length(azurerm_cognitive_deployment.model) == 3

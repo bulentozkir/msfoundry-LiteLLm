@@ -1,11 +1,11 @@
 # AI Gateway preview: alternate Terraform root
 
 This root replaces the test gateway with the **`AIGateway` pricing tier** while
-retaining the existing private Foundry account and exactly three model deployments.
+retaining the existing private Foundry account and its configured model deployments.
 It is independent of the [Standard v2 root](../apim-only/README.md), with its
 own local state and provider lock file.
 
-The current test deployment was verified on **20 October 2026**:
+The expanded seven-model test deployment was verified on **22 October 2026**:
 
 | Setting | Current value |
 |---|---|
@@ -13,7 +13,7 @@ The current test deployment was verified on **20 October 2026**:
 | Region / resource group | Sweden Central / `rg-foundry-aigateway-sweden` |
 | OpenAI base URL | `https://aigw-test-8ps1sz.azure-api.net/default/models/openai/v1` |
 | Persisted profile | Standard gateway disabled; AI Gateway enabled |
-| Verification | All three models completed and streamed; invalid credentials were rejected; both roots converged |
+| Verification | All seven models completed and streamed, including native Claude Messages; invalid credentials were rejected; both roots converged |
 | Private ingress | Endpoint Approved/Succeeded; DNS matches `10.42.3.4`. A connected-client request remains unverified because this workstation's direct connection to that IP timed out. |
 
 **Do not run `terraform destroy` on the Standard/foundation root to switch
@@ -52,9 +52,12 @@ AI Gateway preview is a different product surface, not a cheaper Standard v2
 instance retaining all its API configuration:
 
 - Base URL: `https://<gateway>.azure-api.net/default/models/openai/v1`.
-- All three deployments share `/chat/completions`; choose the exact model in
-  the request body.
+- The six OpenAI-compatible deployments share `/chat/completions`; choose the
+  exact model in the request body. Claude uses the native Anthropic Messages
+  endpoint `/default/models/anthropic/v1/messages` instead.
 - Clients send a runtime key in `api-key`, not `Ocp-Apim-Subscription-Key`.
+  The current gateway also accepts `Authorization: Bearer <runtime-key>` for
+  OpenAI-compatible clients such as VS Code's Custom Endpoint provider.
 - **Every runtime key can invoke all published models and tools.** There is no
   per-model subscription-key boundary in this tier.
 - The Standard v2 products, subscriptions, XML API policies, and Entra-only
@@ -67,8 +70,35 @@ instance retaining all its API configuration:
 - Foundry stays private with local keys disabled, the approved trusted-services
   exception enabled, and backend access through the gateway's managed identity
   with account-scoped Foundry User.
-- The existing model names, versions, capacities, VNet, and four /24 subnets
-  are unchanged. No extra model deployment, application, database, or monitoring is added.
+- A tier switch leaves the foundation's model names, versions, capacities,
+  VNet, and four /24 subnets unchanged. Model additions are managed only by the
+  foundation root. No application, database, or monitoring is added.
+
+## Additional models
+
+Apply the [foundation's partner onboarding and model rollout](../apim-only/README.md#partner-onboarding-and-model-rollout)
+before planning this root. It creates the four requested deployments while
+retaining the original three:
+
+| Deployment | Version | Gateway operation |
+|---|---|---|
+| `claude-opus-5-5` | `2`, hosted on Azure | `/default/models/anthropic/v1/messages` |
+| `gpt-6-astra` | `2026-09-03` | `/default/models/openai/v1/chat/completions` |
+| `FW-GLM-5.3-Flash` | `1` | `/default/models/openai/v1/chat/completions` |
+| `FW-Kimi-K3` | `1` | `/default/models/openai/v1/chat/completions` |
+
+Each uses pay-as-you-go `GlobalStandard`, capacity 10, with automatic upgrades
+disabled. No PTUs, new Foundry account, or second gateway are created.
+Fireworks activation and Claude's actual Marketplace attestation belong to the
+foundation, not this root. Existing Standard APIs/Entra roles remain unchanged.
+
+All seven deployments use the existing gateway-wide runtime key. Adding models
+does not create an APIM subscription or per-model credential boundary. Use the
+nonsecret `model_endpoints` output to select the right native protocol.
+For Claude, send `anthropic-version: 2023-06-01`, `model`,
+`max_tokens`, and `messages`; its response has Anthropic `type: message` and
+content blocks, not OpenAI `choices`. Native streams end with `message_stop`,
+not `[DONE]`.
 
 The ARM SKU is `AIGateway`, **not** `AIGatewayV2`. The API version is pinned to
 `2025-09-01-preview`, the latest advertised and previously working version in
@@ -217,7 +247,9 @@ finally {
 }
 ```
 
-Use the exact names `Gpt5.4mini`, `Phi`, and `FW-DeepSeek-V4.1-Flash`.
+Use the exact published names. The original OpenAI-compatible names are
+`Gpt5.4mini`, `Phi`, and `FW-DeepSeek-V4.1-Flash`; the four additions are
+listed above.
 For GPT mini use `max_completion_tokens` and, if desired, `reasoning_effort = low`;
 the other two accept `max_tokens`. Model RPM/TPM is unchanged by the tier switch.
 
@@ -237,10 +269,20 @@ terraform test -filter=tests\ai_gateway.tftest.hcl
 
 The mocked tests cover tier, model registrations, MI/RBAC, private endpoint/DNS
 wiring, disabled behavior, invalid names, and occupied-subnet rejection.
-`Test-AiGateway.ps1` checks real completions and streaming for all three models,
-missing/invalid keys, the wrong credential header, unknown model rejection,
-and the intended gateway-wide scope. It can wait through Foundry throttling
+`Test-AiGateway.ps1` checks real completions and streaming for all seven models,
+including native Anthropic response/event shapes, missing/invalid keys on
+both protocols, Bearer runtime-key authentication for VS Code, the wrong
+subscription-key header, unknown model rejection, and gateway-wide scope.
+It can wait through Foundry throttling
 and RBAC propagation; it makes billable model requests.
+
+The 22 October verification passed all 10 foundation and 4 gateway mocked
+Terraform tests, live completion/streaming for every deployment, HTTP 401
+checks for missing/invalid and wrong subscription-header credentials on both
+protocols, and HTTP 404 checks for unknown models. DeepSeek also returned a
+valid forced function call using Bearer runtime-key authentication for VS Code.
+Both live Terraform plans returned exit code 0 after the rollout. No existing
+gateway, key, original model deployment, identity, or network was replaced.
 
 The shared exclusivity test performs a real **plan only** in the inactive root
 and requires the subnet-conflict diagnostic; it does not provision a second

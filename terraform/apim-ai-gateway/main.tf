@@ -6,13 +6,14 @@ data "terraform_remote_state" "foundation" {
 }
 
 locals {
-  foundation      = data.terraform_remote_state.foundation.outputs.gateway_foundation
-  ai_gateway_name = var.gateway_name == null ? "aigw-test-${local.foundation.name_suffix}" : var.gateway_name
-  ai_gateway_id   = "${local.foundation.resource_group_id}/providers/Microsoft.ApiManagement/service/${local.ai_gateway_name}"
-  workspace_id    = "${local.ai_gateway_id}/workspaces/default"
-  models          = var.ai_gateway_enabled ? local.foundation.models : {}
-  management_api  = "2025-09-01-preview"
-  openai_base_url = "https://${local.ai_gateway_name}.azure-api.net/default/models/openai/v1"
+  foundation         = data.terraform_remote_state.foundation.outputs.gateway_foundation
+  ai_gateway_name    = var.gateway_name == null ? "aigw-test-${local.foundation.name_suffix}" : var.gateway_name
+  ai_gateway_id      = "${local.foundation.resource_group_id}/providers/Microsoft.ApiManagement/service/${local.ai_gateway_name}"
+  workspace_id       = "${local.ai_gateway_id}/workspaces/default"
+  models             = var.ai_gateway_enabled ? local.foundation.models : {}
+  management_api     = "2025-09-01-preview"
+  openai_base_url    = "https://${local.ai_gateway_name}.azure-api.net/default/models/openai/v1"
+  anthropic_base_url = "https://${local.ai_gateway_name}.azure-api.net/default/models/anthropic"
 }
 
 data "azapi_resource_list" "gateway_subnet_occupants" {
@@ -140,7 +141,7 @@ resource "azapi_resource" "gateway_model" {
     properties = merge(
       {
         displayName        = each.value.deployment_name
-        supportedEndpoints = ["/openai/v1/chat/completions"]
+        supportedEndpoints = each.value.format == "Anthropic" ? ["/anthropic/v1/messages"] : ["/openai/v1/chat/completions"]
         deployment = {
           resourceId   = each.value.deployment_id
           modelName    = each.value.deployment_name

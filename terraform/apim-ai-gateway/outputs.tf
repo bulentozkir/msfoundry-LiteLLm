@@ -14,13 +14,31 @@ output "gateway_url" {
 }
 
 output "openai_base_url" {
-  description = "OpenAI-compatible base URL shared by all registered models."
+  description = "Shared base URL for the registered OpenAI-compatible models; Claude uses the Anthropic endpoint."
   value       = var.ai_gateway_enabled ? local.openai_base_url : null
 }
 
 output "chat_completions_endpoint" {
-  description = "Shared chat-completion endpoint. Select an exact registered name in the model field."
+  description = "Shared OpenAI-compatible chat endpoint. Select an exact registered name in the model field; Claude uses messages_endpoint."
   value       = var.ai_gateway_enabled ? "${local.openai_base_url}/chat/completions" : null
+}
+
+output "anthropic_base_url" {
+  description = "Native Anthropic SDK base URL for Claude, without the /v1/messages operation path."
+  value       = var.ai_gateway_enabled ? local.anthropic_base_url : null
+}
+
+output "messages_endpoint" {
+  description = "Native Anthropic Messages endpoint; send anthropic-version and the gateway runtime key."
+  value       = var.ai_gateway_enabled ? "${local.anthropic_base_url}/v1/messages" : null
+}
+
+output "model_endpoints" {
+  description = "Correct native completion endpoint for each published deployment."
+  value = {
+    for model in local.models :
+    model.deployment_name => model.format == "Anthropic" ? "${local.anthropic_base_url}/v1/messages" : "${local.openai_base_url}/chat/completions"
+  }
 }
 
 output "portal_url" {
@@ -34,7 +52,7 @@ output "ai_gateway_portal_url" {
 }
 
 output "model_deployments" {
-  description = "The three existing Foundry deployments registered in this gateway."
+  description = "All retained and additional Foundry deployments registered in this gateway."
   value       = [for model in local.models : model.deployment_name]
 }
 

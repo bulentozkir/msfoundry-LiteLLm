@@ -9,8 +9,8 @@ output "foundry_account_id" {
 }
 
 output "model_deployments" {
-  description = "Existing Foundry deployment names published through the model-scoped APIs."
-  value       = [for model in local.models : model.deployment_name]
+  description = "All retained Foundry deployments. The additional models are published by the AI Gateway root, not the legacy Standard APIs."
+  value       = [for model in merge(local.models, local.additional_models) : model.deployment_name]
 }
 
 output "apim_gateway_url" {
@@ -125,11 +125,19 @@ output "gateway_foundation" {
     outbound_subnet_id       = azurerm_subnet.ai_gateway_outbound.id
     inbound_subnet_id        = azurerm_subnet.ai_gateway_inbound.id
     private_dns_zone_id      = azurerm_private_dns_zone.ai_gateway.id
-    models = {
-      for model_id, model in local.models :
-      model_id => merge(model, {
-        deployment_id = azurerm_cognitive_deployment.model[model_id].id
-      })
-    }
+    models = merge(
+      {
+        for model_id, model in local.models :
+        model_id => merge(model, {
+          deployment_id = azurerm_cognitive_deployment.model[model_id].id
+        })
+      },
+      {
+        for model_id, model in local.additional_models :
+        model_id => merge(model, {
+          deployment_id = model.format == "Anthropic" ? azapi_resource.claude_opus_5_5.id : azurerm_cognitive_deployment.additional[model_id].id
+        })
+      },
+    )
   }
 }

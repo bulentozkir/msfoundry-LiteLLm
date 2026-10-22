@@ -1,5 +1,10 @@
 variables {
   standard_gateway_enabled = true
+  claude_provider_data = {
+    organizationName = "Contoso"
+    countryCode      = "SE"
+    industry         = "technology"
+  }
 }
 
 mock_provider "azurerm" {}
@@ -24,6 +29,13 @@ mock_provider "random" {
 }
 
 mock_provider "azapi" {
+  mock_data "azapi_resource" {
+    override_during = plan
+    defaults = {
+      output = { properties = { state = "Registered" } }
+    }
+  }
+
   mock_data "azapi_resource_list" {
     defaults = {
       output = { value = [] }
@@ -66,6 +78,8 @@ run "disable_only_standard_gateway" {
   assert {
     condition = (
       length(azurerm_cognitive_deployment.model) == 3 &&
+      length(azurerm_cognitive_deployment.additional) == 3 &&
+      azapi_resource.claude_opus_5_5.name == "claude-opus-5-5" &&
       azapi_resource.foundry.body.properties.publicNetworkAccess == "Disabled" &&
       azapi_resource.foundry.body.properties.disableLocalAuth &&
       azurerm_virtual_network.shared.address_space == toset(["10.42.0.0/16"]) &&
@@ -75,7 +89,7 @@ run "disable_only_standard_gateway" {
       length(azuread_application.model_access.app_role) == 3 &&
       length(azuread_app_role_assignment.model) == 1
     )
-    error_message = "Retain Foundry, exactly three models, shared networking, DNS, and the existing Entra registration and role assignments."
+    error_message = "Retain Foundry, all seven deployments, shared networking, DNS, and the unchanged three-role Entra registration and assignments."
   }
 
   assert {
@@ -89,7 +103,7 @@ run "disable_only_standard_gateway" {
       length(output.apim_model_backend_ids) == 0 &&
       length(output.apim_subscription_ids) == 0 &&
       !output.gateway_foundation.standard_gateway_enabled &&
-      length(output.gateway_foundation.models) == 3 &&
+      length(output.gateway_foundation.models) == 7 &&
       length(output.apim_entra_authentication.model_roles) == 3
     )
     error_message = "Do not advertise disabled Standard endpoints or keys; continue exporting nonsecret foundation and retained Entra metadata."

@@ -1,5 +1,10 @@
 variables {
   standard_gateway_enabled = true
+  claude_provider_data = {
+    organizationName = "Contoso"
+    countryCode      = "SE"
+    industry         = "technology"
+  }
 }
 
 mock_provider "azurerm" {}
@@ -13,6 +18,13 @@ mock_provider "azuread" {
 }
 
 mock_provider "azapi" {
+  mock_data "azapi_resource" {
+    override_during = plan
+    defaults = {
+      output = { properties = { state = "Registered" } }
+    }
+  }
+
   mock_data "azapi_resource_list" {
     defaults = {
       output = { value = [] }

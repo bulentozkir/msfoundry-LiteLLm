@@ -55,6 +55,34 @@ override_data {
             format          = "DeepSeek"
             version         = "2026-04-23"
           }
+          claude_opus_5_5 = {
+            resource_name   = "claude-opus-5-5"
+            deployment_name = "claude-opus-5-5"
+            deployment_id   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.CognitiveServices/accounts/fdry-test01/deployments/claude-opus-5-5"
+            format          = "Anthropic"
+            version         = "2"
+          }
+          gpt6_astra = {
+            resource_name   = "gpt-6-astra"
+            deployment_name = "gpt-6-astra"
+            deployment_id   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.CognitiveServices/accounts/fdry-test01/deployments/gpt-6-astra"
+            format          = "OpenAI"
+            version         = "2026-09-03"
+          }
+          glm5_3_flash = {
+            resource_name   = "fw-glm-5-3-flash"
+            deployment_name = "FW-GLM-5.3-Flash"
+            deployment_id   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.CognitiveServices/accounts/fdry-test01/deployments/FW-GLM-5.3-Flash"
+            format          = "Fireworks"
+            version         = "1"
+          }
+          kimi_k3 = {
+            resource_name   = "fw-kimi-k3"
+            deployment_name = "FW-Kimi-K3"
+            deployment_id   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-test/providers/Microsoft.CognitiveServices/accounts/fdry-test01/deployments/FW-Kimi-K3"
+            format          = "Fireworks"
+            version         = "1"
+          }
         }
       }
     }
@@ -90,9 +118,9 @@ run "private_foundry_ai_gateway" {
 
   assert {
     condition = (
-      length(azapi_resource.gateway_model) == 3 &&
-      length(azapi_resource.model_alias) == 3 &&
-      toset(output.model_deployments) == toset(["Gpt5.4mini", "Phi", "FW-DeepSeek-V4.1-Flash"]) &&
+      length(azapi_resource.gateway_model) == 7 &&
+      length(azapi_resource.model_alias) == 7 &&
+      toset(output.model_deployments) == toset(["Gpt5.4mini", "Phi", "FW-DeepSeek-V4.1-Flash", "claude-opus-5-5", "gpt-6-astra", "FW-GLM-5.3-Flash", "FW-Kimi-K3"]) &&
       alltrue([
         for model_id, model in local.models :
         azapi_resource.gateway_model[model_id].body.properties.deployment.resourceId == model.deployment_id &&
@@ -100,10 +128,16 @@ run "private_foundry_ai_gateway" {
         azapi_resource.model_alias[model_id].body.properties.aliasName == model.deployment_name
       ]) &&
       azapi_resource.gateway_model["gpt5_4_mini"].body.properties.apiFormat == "OpenAIChatCompletions" &&
+      azapi_resource.gateway_model["gpt6_astra"].body.properties.apiFormat == "OpenAIChatCompletions" &&
+      azapi_resource.gateway_model["claude_opus_5_5"].body.properties.supportedEndpoints == ["/anthropic/v1/messages"] &&
+      alltrue([
+        for model_id, model in local.models :
+        azapi_resource.gateway_model[model_id].body.properties.supportedEndpoints == (model.format == "Anthropic" ? ["/anthropic/v1/messages"] : ["/openai/v1/chat/completions"])
+      ]) &&
       !can(azapi_resource.gateway_model["phi"].body.properties.apiFormat) &&
       !can(azapi_resource.gateway_model["deepseek"].body.properties.apiFormat)
     )
-    error_message = "Register exactly the existing three deployments, preserving aliases, versions, and provider-specific API formats."
+    error_message = "Register exactly seven deployments, preserving names and versions, using native Anthropic Messages for Claude and Chat Completions for the other models."
   }
 
   assert {
@@ -114,6 +148,9 @@ run "private_foundry_ai_gateway" {
       contains(azurerm_private_endpoint.ai_gateway[0].private_dns_zone_group[0].private_dns_zone_ids, local.foundation.private_dns_zone_id) &&
       output.openai_base_url == "https://aigw-test-test01.azure-api.net/default/models/openai/v1" &&
       output.chat_completions_endpoint == "${output.openai_base_url}/chat/completions" &&
+      output.messages_endpoint == "https://aigw-test-test01.azure-api.net/default/models/anthropic/v1/messages" &&
+      output.model_endpoints["claude-opus-5-5"] == output.messages_endpoint &&
+      output.model_endpoints["gpt-6-astra"] == output.chat_completions_endpoint &&
       length(azapi_resource.runtime_api_key) == 1
     )
     error_message = "Reuse inbound Private Link/DNS and expose one shared endpoint with a gateway-wide runtime credential."
@@ -139,6 +176,8 @@ run "disable_ai_gateway" {
       length(azurerm_private_endpoint.ai_gateway) == 0 &&
       length(time_sleep.wait_for_foundry_rbac) == 0 &&
       output.gateway_url == null &&
+      output.messages_endpoint == null &&
+      length(output.model_endpoints) == 0 &&
       output.runtime_api_key == null
     )
     error_message = "Disabling this root must remove only its gateway resources and stop advertising its endpoint/key."

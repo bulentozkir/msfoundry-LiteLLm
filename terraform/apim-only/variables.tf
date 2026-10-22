@@ -71,6 +71,25 @@ variable "entra_model_principal_ids" {
   }
 }
 
+variable "claude_provider_data" {
+  description = "Actual Anthropic Marketplace attestation. Applying the Claude deployment accepts its partner offer terms on behalf of this organization."
+  type = object({
+    organizationName = string
+    countryCode      = string
+    industry         = string
+  })
+  nullable = false
+
+  validation {
+    condition = (
+      can(regex("\\S", var.claude_provider_data.organizationName)) &&
+      can(regex("^[A-Z]{2}$", var.claude_provider_data.countryCode)) &&
+      contains(["technology", "finance", "healthcare", "education", "retail", "manufacturing", "government", "media", "other"], var.claude_provider_data.industry)
+    )
+    error_message = "Supply the real legal entity, an uppercase two-letter country code, and a supported lowercase industry; software maps to technology."
+  }
+}
+
 variable "tags" {
   description = "Tags applied to resources that support them."
   type        = map(string)

@@ -10,7 +10,7 @@ With `standard_gateway_enabled = true` (the default), this root deploys:
 
 - one resource group
 - one API Management instance in the `StandardV2` pricing tier, capacity 1
-- one Microsoft Foundry `AIServices` account with exactly three model deployments
+- one Microsoft Foundry `AIServices` account with seven pinned model deployments
 - account-scoped Foundry User access for the gateway's managed identity
 - three Foundry-linked managed-identity backends, three key-protected model APIs,
   three additional Entra-protected model entrypoints, three API-scoped
@@ -25,7 +25,7 @@ It does not deploy App Service, App Service plans, per-user model deployments,
 LiteLLM, MLflow, databases, Redis, storage accounts, monitoring, agents, or projects.
 Other legacy Terraform roots are not used. Disabling `standard_gateway_enabled`
 removes only the Standard gateway, its children, its private endpoint, its
-Foundry role assignment, and the RBAC timer. Foundry, all three deployments,
+Foundry role assignment, and the RBAC timer. Foundry, all seven deployments,
 the four-subnet network/DNS foundation, and Entra objects remain managed here.
 Gateway endpoints/keys are no longer advertised while it is disabled.
 
@@ -56,10 +56,80 @@ describes the AI Gateway pricing tier and its different runtime-key semantics.
 | `Gpt5.4mini` | `gpt-5.4-mini` | `2026-03-17` | 1 |
 | `Phi` | `Phi-4` | `7` | 1 |
 | `FW-DeepSeek-V4.1-Flash` | `DeepSeek-V4-Flash` | `2026-04-23` | 250 |
+| `claude-opus-5-5` | `claude-opus-5-5` | `2` (hosted on Azure) | 10 |
+| `gpt-6-astra` | `gpt-6-astra` | `2026-09-03` | 10 |
+| `FW-GLM-5.3-Flash` | `FW-GLM-5.3-Flash` | `1` | 10 |
+| `FW-Kimi-K3` | `FW-Kimi-K3` | `1` | 10 |
 
 The DeepSeek deployment name is an alias for the catalog model shown above, not
-a separate model version. All three deployments disable automatic version
+a separate model version. All seven deployments disable automatic version
 upgrades. Quota and regional availability must be checked before applying.
+
+The retained Standard APIs, products, subscriptions, and Entra roles still
+cover only the original three deployments. The four additions are exported
+to the separate AI Gateway root; they do not expand legacy Standard access.
+All four additions use pay-as-you-go, not provisioned throughput.
+
+### Partner onboarding and model rollout
+
+Supply `claude_provider_data` in an ignored local tfvars file before planning:
+
+```hcl
+claude_provider_data = {
+  organizationName = "Your actual legal entity"
+  countryCode      = "SE"
+  industry         = "technology"
+}
+```
+
+Use the organization's actual two-letter country code and supported industry;
+`software` maps to `technology`. There is no default legal entity. Creating the
+Claude deployment submits these values and accepts the Anthropic Marketplace
+offer. Review [Anthropic's terms](https://aka.ms/anthropic_tandc) first.
+The current local deployment profile uses the user-supplied Microsoft / SE /
+technology attestation; it is not committed. AzAPI is required for Claude because
+AzureRM does not expose `modelProviderData`.
+
+Fireworks catalog models additionally require the subscription feature
+`Microsoft.CognitiveServices/Fireworks.EnableDeploy`. This root records the
+registration request in Terraform; feature activation can take up to 30 minutes.
+Wait for `Registered` before discovering Fireworks model versions and quota.
+The readiness guard checks the actual feature state at plan time. On a new
+subscription, bootstrap only the registration action, then wait for activation:
+
+```powershell
+terraform apply -target=azapi_resource_action.fireworks_registration
+az feature show --subscription <subscription-id> `
+    --namespace Microsoft.CognitiveServices --name Fireworks.EnableDeploy `
+    --query properties.state -o tsv
+```
+
+Removing the registration action from state does not unregister the service.
+Fireworks is excluded from EU Data Boundary commitments and is not suitable
+for PCI cardholder data. Review the
+[Fireworks terms and data-privacy requirements](https://learn.microsoft.com/azure/foundry/how-to/fireworks/enable-fireworks-models)
+before enabling it.
+
+After onboarding, apply the foundation before the gateway so its read-only
+state reference contains the new deployment IDs. Serialize model provisioning
+to avoid concurrent account-write conflicts:
+
+```powershell
+terraform validate
+terraform plan -out=tfplan-models
+terraform apply -parallelism=1 tfplan-models
+
+Set-Location ..\apim-ai-gateway
+terraform validate
+terraform plan -out=tfplan-model-imports
+terraform apply tfplan-model-imports
+.\tests\Test-AiGateway.ps1
+```
+
+Review both plans before applying. The model rollout must not replace the
+gateway, rotate the existing runtime key, or change the network or original
+three deployments. Fireworks model processing is outside Azure; private
+endpoints protect ingress into Foundry, not the location of model inference.
 
 Foundry local authentication and public network access are disabled. The gateway
 uses its system-assigned managed identity to invoke Foundry privately; clients

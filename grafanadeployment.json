@@ -1,0 +1,632 @@
+{
+  "editable": true,
+  "templating": {
+    "list": [
+      {
+        "name": "subscription",
+        "query": {
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "queryType": "Azure Subscriptions",
+          "refId": "Subscription"
+        },
+        "includeAll": false,
+        "sort": 1,
+        "label": "Subscription",
+        "multi": false,
+        "options": [],
+        "datasource": {
+          "uid": "${DS_AZURE_MONITOR}",
+          "type": "grafana-azure-monitor-datasource"
+        },
+        "description": "Choose the Azure subscription containing your existing Log Analytics workspace.",
+        "refresh": 1,
+        "current": {},
+        "type": "query"
+      },
+      {
+        "name": "workspace",
+        "query": {
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "queryType": "Azure Workspaces",
+          "refId": "Workspace",
+          "subscription": "$subscription"
+        },
+        "includeAll": false,
+        "sort": 1,
+        "label": "Log Analytics workspace",
+        "multi": false,
+        "options": [],
+        "datasource": {
+          "uid": "${DS_AZURE_MONITOR}",
+          "type": "grafana-azure-monitor-datasource"
+        },
+        "description": "Choose an existing workspace. The selected value is its full Azure resource ID.",
+        "refresh": 1,
+        "current": {},
+        "type": "query"
+      },
+      {
+        "multi": true,
+        "label": "Customer",
+        "options": [],
+        "query": {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| distinct Customer\n| order by Customer asc"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        },
+        "type": "query",
+        "sort": 1,
+        "current": {
+          "value": "$__all",
+          "selected": true,
+          "text": "All"
+        },
+        "name": "customer",
+        "includeAll": true,
+        "datasource": {
+          "uid": "${DS_AZURE_MONITOR}",
+          "type": "grafana-azure-monitor-datasource"
+        },
+        "refresh": 2
+      },
+      {
+        "multi": true,
+        "label": "Model",
+        "options": [],
+        "query": {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| distinct Model\n| order by Model asc"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        },
+        "type": "query",
+        "sort": 1,
+        "current": {
+          "value": "$__all",
+          "selected": true,
+          "text": "All"
+        },
+        "name": "model",
+        "includeAll": true,
+        "datasource": {
+          "uid": "${DS_AZURE_MONITOR}",
+          "type": "grafana-azure-monitor-datasource"
+        },
+        "refresh": 2
+      }
+    ]
+  },
+  "tags": [
+    "customer-tokens",
+    "azure-monitor",
+    "portable"
+  ],
+  "panels": [
+    {
+      "title": "Workspace selection and token interpretation",
+      "type": "text",
+      "options": {
+        "mode": "markdown",
+        "content": "**Select your Subscription and Log Analytics workspace above.** Input uses AppRequests Properties['Response-x-aigw-quota-consumed'] only when your source custom rule defines it as input tokens. Output uses only AppMetrics **Completion Tokens**, summing **Sum** once, never multiplying by ItemCount. Prompt, total, cache and prediction measurements are shown separately, not added to output. Missing directions mean missing samples, not proven zero usage. These are operational measurements, not a billing ledger. Customer/model filters are not authorization boundaries."
+      },
+      "id": 1,
+      "gridPos": {
+        "y": 0,
+        "w": 24,
+        "x": 0,
+        "h": 4
+      }
+    },
+    {
+      "title": "Recorded input tokens",
+      "type": "stat",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\n| summarize Tokens = sumif(Tokens, Direction == 'Input')"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value"
+      },
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 4,
+        "w": 6,
+        "x": 0,
+        "h": 4
+      },
+      "id": 2
+    },
+    {
+      "title": "Recorded output tokens",
+      "type": "stat",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\n| summarize Tokens = sumif(Tokens, Direction == 'Output')"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value"
+      },
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 4,
+        "w": 6,
+        "x": 6,
+        "h": 4
+      },
+      "id": 3
+    },
+    {
+      "title": "Recorded input + output",
+      "type": "stat",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\n| summarize Tokens = sum(Tokens)"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value"
+      },
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 4,
+        "w": 6,
+        "x": 12,
+        "h": 4
+      },
+      "id": 4
+    },
+    {
+      "title": "Input request records",
+      "type": "stat",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\n| summarize Requests = countif(Direction == 'Input')"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value"
+      },
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 4,
+        "w": 6,
+        "x": 18,
+        "h": 4
+      },
+      "id": 5
+    },
+    {
+      "title": "Recorded tokens by customer",
+      "type": "barchart",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\n| summarize InputTokens = sumif(Tokens, Direction == 'Input'), OutputTokens = sumif(Tokens, Direction == 'Output') by Customer"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal"
+      },
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 8,
+        "w": 12,
+        "x": 0,
+        "h": 8
+      },
+      "id": 6
+    },
+    {
+      "title": "Recorded tokens by model",
+      "type": "barchart",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\n| summarize InputTokens = sumif(Tokens, Direction == 'Input'), OutputTokens = sumif(Tokens, Direction == 'Output') by Model"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal"
+      },
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 8,
+        "w": 12,
+        "x": 12,
+        "h": 8
+      },
+      "id": 7
+    },
+    {
+      "title": "Input / output tokens over time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "time_series",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\n| summarize Tokens = sum(Tokens) by bin(TimeGenerated, $__interval), Direction\n| order by TimeGenerated asc"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {},
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 16,
+        "w": 24,
+        "x": 0,
+        "h": 8
+      },
+      "id": 8
+    },
+    {
+      "title": "Customer / model totals and missing-sample coverage",
+      "type": "table",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "let requestInput = AppRequests\r\n| extend Customer = tostring(Properties[\"Subscription Name\"]),\r\n         Model = tostring(Properties[\"Response-x-aigw-model\"]),\r\n         Tokens = todouble(Properties[\"Response-x-aigw-quota-consumed\"])\r\n| project TimeGenerated, Customer, Model, Direction = \"Input\", Tokens;\r\nlet metricOutput = AppMetrics\r\n| where Name == \"Completion Tokens\"\r\n| extend Customer = tostring(Properties.Customer),\r\n         Model = tostring(Properties.Model),\r\n         Tokens = todouble(Sum)\r\n| project TimeGenerated, Customer, Model, Direction = \"Output\", Tokens;\r\nunion requestInput, metricOutput\r\n| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0\r\n\n| where $__timeFilter(TimeGenerated)\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\r\n| summarize InputTokens = sumif(Tokens, Direction == 'Input'),\r\n            OutputTokens = sumif(Tokens, Direction == 'Output'),\r\n            InputRecords = countif(Direction == 'Input'),\r\n            OutputRecords = countif(Direction == 'Output') by Customer, Model\r\n| extend RecordedTotal = InputTokens + OutputTokens,\r\n         Coverage = case(InputRecords == 0, 'Output samples only', OutputRecords == 0, 'Input samples only', 'Both directions observed')\r\n| order by Customer asc, Model asc"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {},
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 24,
+        "w": 24,
+        "x": 0,
+        "h": 8
+      },
+      "id": 9
+    },
+    {
+      "title": "Metric breakdown (do not sum token categories)",
+      "type": "table",
+      "targets": [
+        {
+          "queryType": "Azure Log Analytics",
+          "refId": "A",
+          "azureLogAnalytics": {
+            "resultFormat": "table",
+            "resources": [
+              "$workspace"
+            ],
+            "query": "AppMetrics\r\n| where $__timeFilter(TimeGenerated)\r\n| extend Customer = tostring(Properties.Customer), Model = tostring(Properties.Model)\r\n| where Customer in (${customer:singlequote}) and Model in (${model:singlequote})\r\n| summarize MetricSum = sum(Sum), AggregatedMeasurements = sum(ItemCount) by Customer, Model, Name\r\n| order by Customer asc, Model asc, Name asc"
+          },
+          "datasource": {
+            "uid": "${DS_AZURE_MONITOR}",
+            "type": "grafana-azure-monitor-datasource"
+          },
+          "subscription": "$subscription"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {},
+      "datasource": {
+        "uid": "${DS_AZURE_MONITOR}",
+        "type": "grafana-azure-monitor-datasource"
+      },
+      "gridPos": {
+        "y": 32,
+        "w": 24,
+        "x": 0,
+        "h": 9
+      },
+      "id": 10
+    }
+  ],
+  "version": 0,
+  "schemaVersion": 40,
+  "refresh": "5m",
+  "time": {
+    "to": "now",
+    "from": "now-24h"
+  },
+  "uid": "customer-model-tokens-portable",
+  "timezone": "utc",
+  "title": "Customer token usage by model",
+  "id": null,
+  "description": "Select your Azure Monitor data source during import, then choose your subscription and existing Log Analytics workspace. Requires compatible AppRequests and AppMetrics token dimensions.",
+  "__inputs": [
+    {
+      "type": "datasource",
+      "pluginId": "grafana-azure-monitor-datasource",
+      "label": "Azure Monitor",
+      "name": "DS_AZURE_MONITOR",
+      "description": "Select your own Azure Monitor data source with access to your existing Log Analytics workspace.",
+      "pluginName": "Azure Monitor"
+    }
+  ],
+  "__requires": [
+    {
+      "name": "Grafana",
+      "version": "12.0.0",
+      "id": "grafana",
+      "type": "grafana"
+    },
+    {
+      "name": "Azure Monitor",
+      "version": "12.0.0",
+      "id": "grafana-azure-monitor-datasource",
+      "type": "datasource"
+    },
+    {
+      "name": "text",
+      "version": "",
+      "id": "text",
+      "type": "panel"
+    },
+    {
+      "name": "stat",
+      "version": "",
+      "id": "stat",
+      "type": "panel"
+    },
+    {
+      "name": "barchart",
+      "version": "",
+      "id": "barchart",
+      "type": "panel"
+    },
+    {
+      "name": "timeseries",
+      "version": "",
+      "id": "timeseries",
+      "type": "panel"
+    },
+    {
+      "name": "table",
+      "version": "",
+      "id": "table",
+      "type": "panel"
+    }
+  ]
+}

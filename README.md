@@ -109,6 +109,98 @@ compatible with the Custom Endpoint provider. In agent-host chat, enable
 with its configured **AI Gateway** group. If the picker has not refreshed,
 use **Developer: Reload Window**.
 
+### Troubleshooting VS Code authentication
+
+For explicit gateway key authentication, add the following model-level
+configuration. The Custom Endpoint provider substitutes `${apiKey}` from its
+secure credential store at request time and suppresses its default Bearer
+authentication header; the setting contains no credential:
+
+```json
+"requestHeaders": {
+  "api-key": "${apiKey}"
+}
+```
+
+If VS Code reports `502 Unauthorized` with a missing Entra token or
+`Data.All` scope message, check the underlying gateway response. The gateway
+also returns that message for an invalid runtime key; it does not mean that
+client Entra authentication must be enabled.
+
+Open **Language Models > AI Gateway > More Actions > Update API Key** and
+enter the current runtime key from the AI Gateway portal's **Keys** page.
+Enter only the key, without an `api-key:` or `Bearer` prefix, in the secure
+API-key input. Do not put it in workspace settings or source. Start a fresh
+chat after updating it; reload the window if an existing chat retains an old
+credential.
+
+The preview tier uses gateway runtime keys, not Standard v2 APIM subscription
+keys or Foundry API keys. Client key authentication and the gateway's backend
+managed identity are independent: keep Foundry's managed-identity connection
+enabled and its local-key authentication disabled. Granting `Data.All` or enabling Foundry
+API keys is not a fix for a stale VS Code runtime credential.
+
+### Maximum DeepSeek limits
+
+The existing `FW-DeepSeek-V4.1-Flash` deployment still serves
+`DeepSeek-V4-Flash` version `2026-04-23`; maximizing limits does not replace
+the model. As checked on 23 October 2026:
+
+| Limit | Foundry | AI Gateway | VS Code |
+|---|---|---|---|
+| Throughput | 250,000 tokens/minute | Same upstream limit; no additional configured cap | Same upstream limit; no client rate cap |
+| Requests | 250 requests/minute | Same upstream limit; no additional configured cap | Same upstream limit; no client rate cap |
+| Model context | 1,000,000 tokens | Passed through to Foundry | `contextWindow: 1000000` |
+| Maximum output | 384,000 tokens, as published by Microsoft | Passed through to Foundry | `maxOutputTokens: 384000` |
+
+The context/output ceilings are listed in
+[Microsoft's DeepSeek model specifications](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure#deepseek).
+Use this model-level configuration in VS Code:
+
+```json
+"contextWindow": 1000000,
+"maxOutputTokens": 384000
+```
+
+`contextWindow` is VS Code's source of truth for input plus output.
+With the full 384,000-token output reservation, VS Code derives a
+616,000-token prompt budget. Omit `maxInputTokens` rather than retaining the
+old 57,344-token input cap or configuring input plus output beyond the full
+window. This maximum profile replaces the earlier 64K mitigation and retains
+tool calling and secure `api-key` interpolation. Reload the window or start a
+fresh chat if an existing session retains old model metadata.
+
+The Foundry deployment already uses all approved Sweden Central Global
+Standard quota: capacity 250 of 250 for
+`AIServices.GlobalStandard.DeepSeek-V4-Flash`. The Terraform foundation also
+persists capacity 250. A higher SKU capacity ceiling advertised in the model
+catalog is not approved subscription quota. Raising throughput further
+requires an Azure quota increase, followed by an intentional change to the
+foundation's deployment capacity. No larger allocation has been approved or
+applied. Gateway policies cannot raise a Foundry quota, and VS Code has no
+setting that purchases or allocates more TPM.
+
+### Troubleshooting DeepSeek token-rate limits
+
+The maximum profile does not guarantee that a full-context request fits the
+current per-minute quota. Context tokens and tokens/minute have different
+units and must not be treated as the same setting. Prompt history and tool
+definitions are resent on each turn; the failing conversation grew beyond
+126K input tokens per turn, so two nearby turns could exhaust the deployment's
+minute budget even though replies were short. The output ceiling is a maximum,
+not a requirement to generate that many tokens on every call.
+
+Agent tool loops and simultaneous clients can still exhaust the minute budget.
+The agent host may display the
+backend's HTTP 429 as `502 Rate limit exceeded`; its five retries over about
+15 seconds do not span a full reset window. Wait for the server's
+`retry-after`/`retry-after-ms` or `x-ratelimit-reset-tokens` delay before retrying.
+If that timing is unavailable, pause for at least a minute instead of repeatedly
+resubmitting. Compact history or start a fresh chat when practical. Sustained
+larger-context or concurrent workloads need a quota increase and a reviewed
+deployment-capacity change, not another runtime key or client Entra
+authentication.
+
 See [the AI Gateway deployment and switching guide](terraform/apim-ai-gateway/README.md)
 for both switch directions, persistent settings, preview limitations, pricing,
 and secure runtime-key retrieval. The
@@ -124,6 +216,15 @@ available for that tier's APIs, products, subscriptions, and Entra controls.
 These manual runbooks describe the original three-model baseline. Use the
 Terraform guides for the four additional deployments and partner onboarding;
 do not delete the additions to match the older baseline when switching tiers.
+
+## Customer/model token-usage dashboards
+
+The independent [token-observability root](terraform/token-observability/README.md)
+creates Log Analytics, workspace-based Application Insights, and Azure Managed
+Grafana in `rg-law`. It imports the Downloads CSV examples into the standard
+`AppRequests` and `AppMetrics` tables and provides customer/model token views.
+The examples are not a live feed from the existing AI Gateway; the guide
+documents token mappings, missing-sample coverage, costs, and repeatable setup.
 
 ## Retained legacy definitions
 

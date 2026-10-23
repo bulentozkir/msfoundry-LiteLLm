@@ -1,0 +1,13 @@
+let requestInput = AppRequests
+| extend Customer = tostring(Properties["Subscription Name"]),
+         Model = tostring(Properties["Response-x-aigw-model"]),
+         Tokens = todouble(Properties["Response-x-aigw-quota-consumed"])
+| project TimeGenerated, Customer, Model, Direction = "Input", Tokens;
+let metricOutput = AppMetrics
+| where Name == "Completion Tokens"
+| extend Customer = tostring(Properties.Customer),
+         Model = tostring(Properties.Model),
+         Tokens = todouble(Sum)
+| project TimeGenerated, Customer, Model, Direction = "Output", Tokens;
+union requestInput, metricOutput
+| where isnotempty(Customer) and isnotempty(Model) and isnotnull(Tokens) and Tokens >= 0

@@ -253,6 +253,14 @@ listed above.
 For GPT mini use `max_completion_tokens` and, if desired, `reasoning_effort = low`;
 the other two accept `max_tokens`. Model RPM/TPM is unchanged by the tier switch.
 
+DeepSeek already uses its maximum approved Foundry allocation: capacity 250,
+or 250,000 TPM and 250 RPM. No additional gateway token/request policy caps are
+configured at the gateway, workspace, provider, model, alias, or runtime-key
+scopes. The gateway passes through Foundry's limits rather than allocating more
+throughput. See the [maximum DeepSeek profile](../../README.md#maximum-deepseek-limits)
+for VS Code's aligned context/output ceilings and the distinction between
+model context and subscription quota.
+
 For private clients, link/forward the gateway private DNS zone into their
 network and retain routing/NSG access to the private endpoint. Keep the normal
 HTTPS gateway hostname, not its IP. A successful internet call verifies neither

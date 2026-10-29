@@ -266,6 +266,64 @@ network and retain routing/NSG access to the private endpoint. Keep the normal
 HTTPS gateway hostname, not its IP. A successful internet call verifies neither
 private-client DNS nor private-client routing.
 
+### Kimi K3 and GLM 5.3 Flash key access
+
+Both models are already deployed in Foundry and published through the existing
+gateway; do not create duplicate deployments to obtain client access:
+
+| Request `model` | Foundry version | Deployment SKU / capacity |
+|---|---|---|
+| `FW-Kimi-K3` | `1` | `GlobalStandard` / `10` |
+| `FW-GLM-5.3-Flash` | `1` | `GlobalStandard` / `10` |
+
+Send `POST` requests to:
+
+```text
+https://aigw-test-8ps1sz.azure-api.net/default/models/openai/v1/chat/completions
+```
+
+Use `Content-Type: application/json` and `api-key: <gateway-runtime-key>`.
+Retrieve the existing key from the gateway portal's **Keys** page or capture
+the sensitive Terraform output as shown above; do not use a Foundry key or
+store the credential in source. For Kimi:
+
+```json
+{
+  "model": "FW-Kimi-K3",
+  "messages": [{ "role": "user", "content": "Reply READY." }],
+  "max_tokens": 1024
+}
+```
+
+For GLM, change only `model` to `FW-GLM-5.3-Flash`.
+The gateway authenticates to private Foundry using its managed identity;
+clients do not need an Entra token for these key-authenticated calls.
+
+In VS Code, both models can use the existing **AI Gateway** Custom Endpoint
+group and its securely stored runtime key. Use the full endpoint above,
+Chat Completions, tool calling, vision, and the same model-level
+`requestHeaders: { "api-key": "${apiKey}" }` configuration as DeepSeek.
+The configured client budgets are:
+
+| VS Code model | Context window | Output allowance |
+|---|---|---|
+| `FW-Kimi-K3` | 1,000,000 | 8,192 |
+| `FW-GLM-5.3-Flash` | 1,048,576 | 8,192 |
+
+Context sizes and multimodal support are described in the
+[Kimi catalog entry](https://ai.azure.com/catalog/models/FW-Kimi-K3) and
+[GLM Flash catalog entry](https://ai.azure.com/catalog/models/FW-GLM-5.3-Flash).
+The 8,192-token output allowance is a client working budget, not a claim about
+the model's maximum generation length. DeepSeek's existing settings are
+independent and remain unchanged. Select either model under the **AI Gateway**
+group; use **Developer: Reload Window** only if the picker has not refreshed.
+
+This preview tier does **not** create an APIM subscription for either model.
+Its runtime key is gateway-wide and can invoke all published models.
+`Ocp-Apim-Subscription-Key` is not accepted in place of `api-key`. Separate
+model-scoped APIM subscription keys require the Standard v2 configuration,
+not another model deployment or an automatic change to this gateway's tier.
+
 ## Validation and operational checks
 
 ```powershell

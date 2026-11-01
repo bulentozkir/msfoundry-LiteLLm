@@ -109,6 +109,41 @@ compatible with the Custom Endpoint provider. In agent-host chat, enable
 with its configured **AI Gateway** group. If the picker has not refreshed,
 use **Developer: Reload Window**.
 
+All seven deployments can share this **AI Gateway** provider and its securely
+stored runtime key. Add the exact deployment IDs listed above, using
+model-level `"requestHeaders": { "api-key": "${apiKey}" }`. The six
+OpenAI-compatible models use the chat-completions URL above. Claude needs a
+model-level protocol override:
+
+```json
+{
+  "id": "claude-opus-5-5",
+  "name": "claude-opus-5-5 (AI Gateway)",
+  "apiType": "messages",
+  "url": "https://aigw-test-8ps1sz.azure-api.net/default/models/anthropic/v1/messages",
+  "requestHeaders": {
+    "api-key": "${apiKey}",
+    "anthropic-version": "2023-06-01"
+  },
+  "toolCalling": true,
+  "vision": true,
+  "contextWindow": 1000000,
+  "maxOutputTokens": 128000,
+  "modelOptions": {
+    "temperature": null,
+    "top_p": null
+  }
+}
+```
+
+Omitting unsupported sampling parameters avoids errors with adaptive-thinking
+Claude and reasoning GPT models. Keep Phi's `toolCalling` and `vision` set to
+`false`: base Phi-4 is a text-chat model, so select it in **Ask** mode rather
+than advertising agent tools it does not support. Its 16,384-token context
+uses an 8,192-token local output reservation, leaving room for the prompt.
+The existing DeepSeek maximum profile below remains unchanged. Model metadata
+does not increase Foundry TPM quotas or change deployment capacity.
+
 ### Troubleshooting VS Code authentication
 
 For explicit gateway key authentication, add the following model-level

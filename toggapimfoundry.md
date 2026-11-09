@@ -556,7 +556,7 @@ This optional UI toggle was not completed by the automation in the session. It i
 
 Use the **existing implicit Grafana experience in Azure Portal**, not a new standalone Grafana server and not a new Managed Grafana workspace.
 
-The supplied file is [togg-token-consumption-grafana.json](./togg-token-consumption-grafana.json). Download/save it locally using the repository browser or editor so the portal file picker can select it. No edits to that file are required by this runbook.
+The supplied file is [togg-token-consumption-grafana.json](https://github.com/bulentozkir/msfoundry-LiteLLm/blob/main/togg-token-consumption-grafana.json). Download/save it locally from GitHub so the portal file picker can select it. No edits to that file are required by this runbook.
 
 ### 11.1 Import the dashboard
 
@@ -564,7 +564,7 @@ The supplied file is [togg-token-consumption-grafana.json](./togg-token-consumpt
 2. Select **Dashboards with Grafana** in the left menu.
 3. In the embedded Grafana/gallery interface, select **New** > **Import**.
 4. Choose **Upload JSON file** / the file picker.
-5. Select **togg-token-consumption-grafana.json**.
+5. Select the downloaded [togg-token-consumption-grafana.json](https://github.com/bulentozkir/msfoundry-LiteLLm/blob/main/togg-token-consumption-grafana.json) file.
 6. Select **Load**.
 7. Use title **TOGG Foundry - Input and Output Tokens**.
 8. If the importer asks to resolve **Existing Azure Monitor datasource / DS_AZURE_MONITOR**, select the existing built-in/preconfigured **Azure Monitor** datasource. Do not add credentials or create a new datasource identity.

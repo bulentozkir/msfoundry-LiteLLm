@@ -1,6 +1,23 @@
+import getpass
 import json
 import os
+import sys
 import urllib.request
+
+sys.stdout.reconfigure(encoding="utf-8")
+
+APIM_SUBSCRIPTION_KEY = os.environ.get("APIM_SUBSCRIPTION_KEY", "").strip()
+if not APIM_SUBSCRIPTION_KEY:
+    try:
+        APIM_SUBSCRIPTION_KEY = getpass.getpass("APIM subscription key: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        raise SystemExit(
+            "No subscription key supplied. Set APIM_SUBSCRIPTION_KEY or run "
+            "the script in a terminal to enter it securely."
+        ) from None
+
+if not APIM_SUBSCRIPTION_KEY:
+    raise SystemExit("APIM subscription key cannot be empty.")
 
 url = (
     "https://togg-ai-platform-apim.azure-api.net/"
@@ -17,7 +34,7 @@ request = urllib.request.Request(
     data=json.dumps(payload).encode(),
     headers={
         "Content-Type": "application/json",
-        "Ocp-Apim-Subscription-Key": os.environ["APIM_SUBSCRIPTION_KEY"],
+        "Ocp-Apim-Subscription-Key": APIM_SUBSCRIPTION_KEY,
     },
 )
 with urllib.request.urlopen(request, timeout=150) as response:

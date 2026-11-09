@@ -1,6 +1,6 @@
 # TOGG Foundry and APIM: Azure Portal administrator runbook
 
-This runbook reproduces the final model, gateway, token-governance, Content Safety, and reporting configuration from the November 2026 session. All changes are made through browser portals, including the APIM policy code editor. There are no Terraform, CLI, Cloud Shell, or application-code deployment steps.
+This runbook reproduces the final model, gateway, token-governance, Content Safety, and reporting configuration from the November 2026 session. All Azure configuration changes are made through browser portals, including the APIM policy code editor. There are no Terraform, Azure CLI, Cloud Shell, or application-code deployment steps. Section 9.4 adds an optional local PowerShell step for Windows desktop clients.
 
 > **Assumptions:** APIM, Foundry, the Foundry project, storage, Application Insights and its workspace, Content Safety, networking, private endpoints, and the Azure Monitor/Application Insights implicit Grafana experience are already available. Subscription-level `Microsoft.Dashboard` registration is resolved. Infrastructure creation and identity provisioning are outside this runbook.
 
@@ -500,6 +500,19 @@ Content-Type: application/json
 They do not send Foundry or Content Safety resource keys, Entra tokens, or instrumentation keys.
 
 For the shared subscription, the daily budget is shared between DeepSeek and Kimi. Different subscription keys have their own counters.
+
+### 9.4 Set the desktop client's environment variable (Windows)
+
+1. Open **PowerShell** on the desktop that will run the Python client.
+2. Replace `?????` with your **APIM product subscription key**, then run:
+
+   ```powershell
+   [System.Environment]::SetEnvironmentVariable("APIM_SUBSCRIPTION_KEY", "?????", "User")
+   ```
+
+3. Fully close and reopen **VS Code** so it inherits the saved user environment variable, then open a new terminal and run the Python client.
+
+This persists the variable for your Windows user account; it does not update already-running processes. No Azure subscription ID is needed. Keep the actual key out of source code and this document.
 
 ## 10. Enable and verify token reporting
 

@@ -21,8 +21,7 @@ if not APIM_SUBSCRIPTION_KEY:
 
 url = (
     "https://togg-ai-platform-apim.azure-api.net/"
-    "TOGG-AI-PLATFORM-FOUNDRY-02/openai/deployments/"
-    "DeepSeek-V4.1-Flash-1017/chat/completions?api-version=2024-10-21"
+    "deepseek-v4-1/chat/completions"
 )
 
 payload = {

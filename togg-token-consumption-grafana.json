@@ -14,7 +14,7 @@
   "description": "Live Application Insights token consumption. Input is Prompt Tokens; Output is Completion Tokens. Preaggregated valueSum is used, not event counts. Reasoning and cached token categories are not added again. Select an existing Azure Monitor datasource during import.",
   "tags": ["TOGG", "APIM", "Foundry", "tokens"],
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "timezone": "browser",
   "refresh": "1m",
@@ -34,12 +34,14 @@
         "name": "model",
         "label": "Model",
         "type": "custom",
-        "query": "All : __all,DeepSeek V4.1 Flash : DeepSeek-V4.1-Flash-1017,Kimi K3.1 Pro : Kimi-K3.1-Pro",
+        "query": "All : __all,DeepSeek V4.1 Flash : DeepSeek-V4.1-Flash-1017,Kimi K3.1 Pro : Kimi-K3.1-Pro,Claude Sonnet 5.5 : claude-sonnet-5-5,GPT Sol 6.1 : gpt-6.1-sol",
         "current": {"text": "All", "value": "__all"},
         "options": [
           {"text": "All", "value": "__all", "selected": true},
           {"text": "DeepSeek V4.1 Flash", "value": "DeepSeek-V4.1-Flash-1017", "selected": false},
-          {"text": "Kimi K3.1 Pro", "value": "Kimi-K3.1-Pro", "selected": false}
+          {"text": "Kimi K3.1 Pro", "value": "Kimi-K3.1-Pro", "selected": false},
+          {"text": "Claude Sonnet 5.5", "value": "claude-sonnet-5-5", "selected": false},
+          {"text": "GPT Sol 6.1", "value": "gpt-6.1-sol", "selected": false}
         ],
         "multi": false,
         "includeAll": false,
@@ -92,7 +94,7 @@
             "resultFormat": "table",
             "timeColumn": "timestamp",
             "dashboardTime": false,
-            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Prompt Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize InputTokens = sum(coalesce(valueSum, value))"
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Prompt Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro','claude-sonnet-5-5','gpt-6.1-sol')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize InputTokens = sum(coalesce(valueSum, value))"
           }
         }
       ]
@@ -120,7 +122,7 @@
             "resultFormat": "table",
             "timeColumn": "timestamp",
             "dashboardTime": false,
-            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Completion Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize OutputTokens = sum(coalesce(valueSum, value))"
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Completion Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro','claude-sonnet-5-5','gpt-6.1-sol')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize OutputTokens = sum(coalesce(valueSum, value))"
           }
         }
       ]
@@ -148,7 +150,7 @@
             "resultFormat": "table",
             "timeColumn": "timestamp",
             "dashboardTime": false,
-            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Total Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize TotalTokens = sum(coalesce(valueSum, value))"
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Total Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro','claude-sonnet-5-5','gpt-6.1-sol')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize TotalTokens = sum(coalesce(valueSum, value))"
           }
         }
       ]
@@ -176,7 +178,7 @@
             "resultFormat": "time_series",
             "timeColumn": "timestamp",
             "dashboardTime": false,
-            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name in ('Prompt Tokens','Completion Tokens')\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| extend Dimension = tostring(customDimensions['${dimension:raw}']), Direction = iff(name == 'Prompt Tokens','Input','Output')\n| summarize Tokens = sum(coalesce(valueSum, value)) by timestamp = bin(timestamp, $__interval), Series = strcat(Direction, ' / ', Dimension)\n| order by timestamp asc"
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name in ('Prompt Tokens','Completion Tokens')\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro','claude-sonnet-5-5','gpt-6.1-sol')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| extend Dimension = tostring(customDimensions['${dimension:raw}']), Direction = iff(name == 'Prompt Tokens','Input','Output')\n| summarize Tokens = sum(coalesce(valueSum, value)) by timestamp = bin(timestamp, $__interval), Series = strcat(Direction, ' / ', Dimension)\n| order by timestamp asc"
           }
         }
       ]
@@ -204,7 +206,7 @@
             "resultFormat": "table",
             "timeColumn": "timestamp",
             "dashboardTime": false,
-            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name in ('Prompt Tokens','Completion Tokens')\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| extend Dimension = tostring(customDimensions['${dimension:raw}']), Tokens = coalesce(valueSum, value)\n| summarize InputTokens = sumif(Tokens, name == 'Prompt Tokens'), OutputTokens = sumif(Tokens, name == 'Completion Tokens') by Dimension\n| extend TotalTokens = InputTokens + OutputTokens\n| order by TotalTokens desc"
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name in ('Prompt Tokens','Completion Tokens')\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro','claude-sonnet-5-5','gpt-6.1-sol')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| extend Dimension = tostring(customDimensions['${dimension:raw}']), Tokens = coalesce(valueSum, value)\n| summarize InputTokens = sumif(Tokens, name == 'Prompt Tokens'), OutputTokens = sumif(Tokens, name == 'Completion Tokens') by Dimension\n| extend TotalTokens = InputTokens + OutputTokens\n| order by TotalTokens desc"
           }
         }
       ]

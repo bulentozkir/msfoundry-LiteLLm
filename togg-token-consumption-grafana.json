@@ -1,0 +1,213 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_AZURE_MONITOR",
+      "label": "Existing Azure Monitor datasource",
+      "description": "Select an existing Grafana Azure Monitor connection with access to APPI-AI-PLATFORM-FOUNDRY. No credentials or new authentication configuration are included.",
+      "type": "datasource",
+      "pluginId": "grafana-azure-monitor-datasource",
+      "pluginName": "Azure Monitor"
+    }
+  ],
+  "uid": "togg-foundry-token-report",
+  "title": "TOGG Foundry - Input and Output Tokens",
+  "description": "Live Application Insights token consumption. Input is Prompt Tokens; Output is Completion Tokens. Preaggregated valueSum is used, not event counts. Reasoning and cached token categories are not added again. Select an existing Azure Monitor datasource during import.",
+  "tags": ["TOGG", "APIM", "Foundry", "tokens"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {"from": "now-24h", "to": "now"},
+  "annotations": {"list": []},
+  "links": [
+    {
+      "title": "Application Insights",
+      "type": "link",
+      "url": "https://portal.azure.com/#@togg.onmicrosoft.com/resource/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/providers/Microsoft.Insights/components/APPI-AI-PLATFORM-FOUNDRY/overview",
+      "targetBlank": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "custom",
+        "query": "All : __all,DeepSeek V4.1 Flash : DeepSeek-V4.1-Flash-1017,Kimi K3.1 Pro : Kimi-K3.1-Pro",
+        "current": {"text": "All", "value": "__all"},
+        "options": [
+          {"text": "All", "value": "__all", "selected": true},
+          {"text": "DeepSeek V4.1 Flash", "value": "DeepSeek-V4.1-Flash-1017", "selected": false},
+          {"text": "Kimi K3.1 Pro", "value": "Kimi-K3.1-Pro", "selected": false}
+        ],
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "name": "dimension",
+        "label": "Break down by",
+        "type": "custom",
+        "query": "Model : Model,Subscription : Subscription ID,API : API ID,Region : Region,Service ID : Service ID,Service name : Service Name,Service type : Service Type",
+        "current": {"text": "Model", "value": "Model"},
+        "options": [
+          {"text": "Model", "value": "Model", "selected": true},
+          {"text": "Subscription", "value": "Subscription ID", "selected": false},
+          {"text": "API", "value": "API ID", "selected": false},
+          {"text": "Region", "value": "Region", "selected": false},
+          {"text": "Service ID", "value": "Service ID", "selected": false},
+          {"text": "Service name", "value": "Service Name", "selected": false},
+          {"text": "Service type", "value": "Service Type", "selected": false}
+        ],
+        "multi": false,
+        "includeAll": false,
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Input tokens",
+      "description": "Prompt Tokens over the selected time range and model.",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4},
+      "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+      "fieldConfig": {
+        "defaults": {"unit": "short", "decimals": 0, "color": {"mode": "fixed", "fixedColor": "blue"}},
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none"},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+          "queryType": "Azure Log Analytics",
+          "subscription": "4be00143-6ced-4790-bba8-78efc2c755fd",
+          "azureLogAnalytics": {
+            "resources": ["/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/providers/Microsoft.Insights/components/APPI-AI-PLATFORM-FOUNDRY"],
+            "resultFormat": "table",
+            "timeColumn": "timestamp",
+            "dashboardTime": false,
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Prompt Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize InputTokens = sum(coalesce(valueSum, value))"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Output tokens",
+      "description": "Completion Tokens, including provider-reported reasoning where applicable. Do not add Reasoning Tokens again.",
+      "type": "stat",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 4},
+      "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+      "fieldConfig": {
+        "defaults": {"unit": "short", "decimals": 0, "color": {"mode": "fixed", "fixedColor": "green"}},
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none"},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+          "queryType": "Azure Log Analytics",
+          "subscription": "4be00143-6ced-4790-bba8-78efc2c755fd",
+          "azureLogAnalytics": {
+            "resources": ["/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/providers/Microsoft.Insights/components/APPI-AI-PLATFORM-FOUNDRY"],
+            "resultFormat": "table",
+            "timeColumn": "timestamp",
+            "dashboardTime": false,
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Completion Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize OutputTokens = sum(coalesce(valueSum, value))"
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Total tokens",
+      "description": "Total Tokens as reported by the model. Excludes duplicate aggregate OTel metric series.",
+      "type": "stat",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 4},
+      "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+      "fieldConfig": {
+        "defaults": {"unit": "short", "decimals": 0, "color": {"mode": "fixed", "fixedColor": "purple"}},
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none"},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+          "queryType": "Azure Log Analytics",
+          "subscription": "4be00143-6ced-4790-bba8-78efc2c755fd",
+          "azureLogAnalytics": {
+            "resources": ["/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/providers/Microsoft.Insights/components/APPI-AI-PLATFORM-FOUNDRY"],
+            "resultFormat": "table",
+            "timeColumn": "timestamp",
+            "dashboardTime": false,
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name == 'Total Tokens'\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| summarize TotalTokens = sum(coalesce(valueSum, value))"
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Input / Output over time",
+      "description": "Choose the breakdown dimension above. Uses log dimensions, so Metrics Explorer dimension opt-in is not required.",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 4, "w": 24, "h": 9},
+      "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+      "fieldConfig": {
+        "defaults": {"unit": "short", "decimals": 0, "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 2, "fillOpacity": 10, "spanNulls": false}},
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "calcs": ["sum"]}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+          "queryType": "Azure Log Analytics",
+          "subscription": "4be00143-6ced-4790-bba8-78efc2c755fd",
+          "azureLogAnalytics": {
+            "resources": ["/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/providers/Microsoft.Insights/components/APPI-AI-PLATFORM-FOUNDRY"],
+            "resultFormat": "time_series",
+            "timeColumn": "timestamp",
+            "dashboardTime": false,
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name in ('Prompt Tokens','Completion Tokens')\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| extend Dimension = tostring(customDimensions['${dimension:raw}']), Direction = iff(name == 'Prompt Tokens','Input','Output')\n| summarize Tokens = sum(coalesce(valueSum, value)) by timestamp = bin(timestamp, $__interval), Series = strcat(Direction, ' / ', Dimension)\n| order by timestamp asc"
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Input / Output by selected dimension",
+      "description": "Exact prompt/completion token sums. The total is Input + Output; reasoning/cache categories are not counted a second time.",
+      "type": "table",
+      "gridPos": {"x": 0, "y": 13, "w": 24, "h": 8},
+      "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+      "fieldConfig": {
+        "defaults": {"unit": "short", "decimals": 0, "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}},
+        "overrides": [{"matcher": {"id": "byName", "options": "Dimension"}, "properties": [{"id": "unit", "value": "string"}]}]
+      },
+      "options": {"showHeader": true, "cellHeight": "sm", "sortBy": [{"displayName": "TotalTokens", "desc": true}], "footer": {"show": false}},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "grafana-azure-monitor-datasource", "uid": "${DS_AZURE_MONITOR}"},
+          "queryType": "Azure Log Analytics",
+          "subscription": "4be00143-6ced-4790-bba8-78efc2c755fd",
+          "azureLogAnalytics": {
+            "resources": ["/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/providers/Microsoft.Insights/components/APPI-AI-PLATFORM-FOUNDRY"],
+            "resultFormat": "table",
+            "timeColumn": "timestamp",
+            "dashboardTime": false,
+            "query": "customMetrics\n| where $__timeFilter(timestamp)\n| where name in ('Prompt Tokens','Completion Tokens')\n| extend Model = tostring(customDimensions['Model'])\n| where Model in ('DeepSeek-V4.1-Flash-1017','Kimi-K3.1-Pro')\n| where ${model:singlequote} == '__all' or Model == ${model:singlequote}\n| extend Dimension = tostring(customDimensions['${dimension:raw}']), Tokens = coalesce(valueSum, value)\n| summarize InputTokens = sumif(Tokens, name == 'Prompt Tokens'), OutputTokens = sumif(Tokens, name == 'Completion Tokens') by Dimension\n| extend TotalTokens = InputTokens + OutputTokens\n| order by TotalTokens desc"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1610 1250" role="img" aria-labelledby="title description">
+  <title id="title">Example API Management and Azure AI Foundry architecture</title>
+  <desc id="description">An anonymized conceptual architecture showing client authentication, API Management policies and secret named values, Content Safety checks, private Foundry inference, and token reporting through Application Insights and embedded Grafana.</desc>
+  <defs>
+    <marker id="blue-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#0078d4"/></marker>
+    <marker id="gray-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#495057"/></marker>
+    <marker id="green-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#107c10"/></marker>
+    <marker id="orange-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#f7630c"/></marker>
+    <marker id="teal-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#0c8599"/></marker>
+    <style>
+      text { fill: #000; font-family: Arial, sans-serif; }
+      .title { font-size: 32px; font-weight: 700; }
+      .subtitle { font-size: 14px; }
+      .heading { font-size: 17px; font-weight: 700; }
+      .label { font-size: 15px; text-anchor: middle; }
+      .note { font-size: 13px; }
+      .container { fill: none; stroke-width: 2; }
+      .box { stroke-width: 2; }
+      .flow { fill: none; stroke-width: 2; }
+    </style>
+  </defs>
+  <rect width="1610" height="1250" fill="#fff"/>
+  <text class="title" x="40" y="58">APIM + Azure AI Foundry | Example architecture</text>
+  <text class="subtitle" x="40" y="112">
+    <tspan x="40">Anonymized conceptual view from the runbook; not a live resource inventory.</tspan>
+    <tspan x="40" dy="22">Dashed ingress is pre-created and shown only as an optional access path.</tspan>
+  </text>
+
+  <rect class="container" x="40" y="200" width="230" height="530" rx="12" stroke="#0078d4"/>
+  <rect class="container" x="310" y="200" width="510" height="530" rx="12" stroke="#0078d4"/>
+  <rect class="container" x="870" y="200" width="465" height="540" rx="12" stroke="#107c10"/>
+  <rect class="container" x="840" y="790" width="730" height="390" rx="12" stroke="#0c8599"/>
+  <text class="heading" x="55" y="237">Clients and ingress</text>
+  <text class="heading" x="325" y="237">API Management | Standard v2</text>
+  <text class="heading" x="885" y="237">Private network and Foundry inference</text>
+  <text class="heading" x="855" y="818">Monitoring and reporting</text>
+
+  <rect class="box" x="65" y="280" width="180" height="120" rx="10" stroke="#0078d4" fill="#cfe4fa"/>
+  <rect class="box" x="65" y="510" width="180" height="140" rx="10" stroke="#0078d4" fill="#cfe4fa"/>
+  <rect class="box" x="340" y="280" width="450" height="100" rx="10" stroke="#0078d4" fill="#cfe4fa"/>
+  <rect class="box" x="340" y="425" width="280" height="150" rx="10" stroke="#f7630c" fill="#fff4ce"/>
+  <rect class="box" x="645" y="425" width="145" height="150" rx="10" stroke="#495057" fill="#f3f2f1"/>
+  <rect class="box" x="900" y="255" width="405" height="125" rx="10" stroke="#107c10" fill="#dff6dd"/>
+  <rect class="box" x="900" y="425" width="405" height="100" rx="10" stroke="#107c10" fill="#dff6dd"/>
+  <rect class="box" x="900" y="570" width="405" height="120" rx="10" stroke="#107c10" fill="#dff6dd"/>
+  <rect class="box" x="335" y="840" width="330" height="150" rx="10" stroke="#f7630c" fill="#fff4ce"/>
+  <rect class="box" x="880" y="840" width="300" height="150" rx="10" stroke="#0c8599" fill="#d9f3f7"/>
+  <rect class="box" x="1240" y="840" width="300" height="150" rx="10" stroke="#0c8599" fill="#d9f3f7"/>
+  <rect class="box" x="880" y="1040" width="300" height="100" rx="10" stroke="#0c8599" fill="#d9f3f7"/>
+
+  <path class="flow" d="M245 340 H340" stroke="#0078d4" marker-end="url(#blue-arrow)"/>
+  <path class="flow" d="M245 580 H280 V350 H340" stroke="#0078d4" stroke-dasharray="7 5" marker-end="url(#blue-arrow)"/>
+  <path class="flow" d="M480 380 V425" stroke="#0078d4" marker-end="url(#blue-arrow)"/>
+  <path class="flow" d="M645 500 H620" stroke="#495057" stroke-dasharray="7 5" marker-end="url(#gray-arrow)"/>
+  <path class="flow" d="M600 425 V400 H860 L875 315 H900" stroke="#107c10" marker-end="url(#green-arrow)"/>
+  <path class="flow" d="M1100 380 V425" stroke="#107c10" marker-end="url(#green-arrow)"/>
+  <path class="flow" d="M1100 525 V570" stroke="#107c10" marker-end="url(#green-arrow)"/>
+  <path class="flow" d="M480 575 V840" stroke="#f7630c" marker-start="url(#orange-arrow)" marker-end="url(#orange-arrow)"/>
+  <path class="flow" d="M600 575 V770 H1030 V840" stroke="#0c8599" marker-end="url(#teal-arrow)"/>
+  <path class="flow" d="M1030 990 V1040" stroke="#0c8599" marker-end="url(#teal-arrow)"/>
+  <path class="flow" d="M1180 915 H1240" stroke="#0c8599" marker-end="url(#teal-arrow)"/>
+
+  <text class="label" x="155" y="329"><tspan x="155">Client applications</tspan><tspan x="155" dy="22">Product key + HTTPS</tspan></text>
+  <text class="label" x="155" y="562"><tspan x="155">APIM inbound</tspan><tspan x="155" dy="22">private endpoint</tspan><tspan x="155" dy="22">(pre-created)</tspan></text>
+  <text class="label" x="565" y="320"><tspan x="565">Gateway: four APIs and products</tspan><tspan x="565" dy="22">One subscription per model</tspan></text>
+  <text class="label" x="480" y="480"><tspan x="480">Per-API policies</tspan><tspan x="480" dy="22">Model pinning + token limits</tspan><tspan x="480" dy="22">Safety + token metrics</tspan></text>
+  <text class="label" x="717.5" y="480"><tspan x="717.5">Secret named</tspan><tspan x="717.5" dy="22">values: Foundry</tspan><tspan x="717.5" dy="22">and Safety keys</tspan></text>
+  <text class="label" x="1102.5" y="299"><tspan x="1102.5">Pre-created virtual network</tspan><tspan x="1102.5" dy="22">APIM outbound subnet to</tspan><tspan x="1102.5" dy="22">Foundry private endpoint</tspan></text>
+  <text class="label" x="1102.5" y="469"><tspan x="1102.5">Foundry account and project</tspan><tspan x="1102.5" dy="22">Public network access disabled</tspan></text>
+  <text class="label" x="1102.5" y="624"><tspan x="1102.5">Four model deployments</tspan><tspan x="1102.5" dy="22">DeepSeek / Kimi / Sonnet / GPT</tspan></text>
+  <text class="label" x="500" y="896"><tspan x="500">Content Safety S0</tspan><tspan x="500" dy="22">Public HTTPS + API key</tspan><tspan x="500" dy="22">Text analysis + prompt shields</tspan></text>
+  <text class="label" x="1030" y="896"><tspan x="1030">Application Insights</tspan><tspan x="1030" dy="22">Token metrics + diagnostics</tspan><tspan x="1030" dy="22">Bodies and headers not logged</tspan></text>
+  <text class="label" x="1390" y="896"><tspan x="1390">Embedded Grafana</tspan><tspan x="1390" dy="22">Azure Monitor datasource</tspan><tspan x="1390" dy="22">Input/output token reports</tspan></text>
+  <text class="label" x="1030" y="1084"><tspan x="1030">Linked Log Analytics</tspan><tspan x="1030" dy="22">workspace</tspan></text>
+  <text class="note" x="315" y="752"><tspan x="315">Safety checks</tspan><tspan x="315" dy="19">and pass/block result</tspan><tspan x="315" dy="19">(fail closed)</tspan></text>
+  <text class="note" x="690" y="752">Token telemetry</text>
+  <text class="note" x="640" y="625"><tspan x="640">Inference only</tspan><tspan x="640" dy="19">after safety passes</tspan></text>
+</svg>

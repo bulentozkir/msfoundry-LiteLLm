@@ -1,5 +1,28 @@
 # Azure AI Foundry and APIM: Azure Portal administrator runbook
 
+## Architecture overview
+
+```mermaid
+graph LR
+    INTERNET["Internet"] -.->|"Public HTTPS, if enabled"| APIM["API Management"]
+    INTRANET["Intranet"] -.->|"APIM VNet inbound<br/>via private endpoint, if connected"| APIM
+    APIM --> POLICIES["Policies"]
+    POLICIES -->|"Safety checks"| SAFETY["Content Safety"]
+    POLICIES -.->|"Optional secret source"| VAULT["Key Vault"]
+    POLICIES -->|"Token metrics"| INSIGHTS["Application Insights"]
+    INSIGHTS --> GRAFANA["Grafana"]
+    POLICIES -->|"On pass: APIM VNet outbound<br/>to Foundry VNet inbound (private endpoint)"| FOUNDRY["Foundry account, project, and models"]
+    FOUNDRY -.->|"Project/agent outbound, if configured"| STORAGE["Storage account"]
+    FOUNDRY -.->|"Project/agent outbound, if configured"| SEARCH["Azure AI Search"]
+    FOUNDRY -.->|"Optional telemetry"| INSIGHTS
+```
+
+This is an anonymized conceptual view, not a live inventory. Dashed connections are optional or unverified. APIM uses secret named values in this runbook; [Key Vault-backed named values](https://learn.microsoft.com/azure/api-management/api-management-howto-properties) would require a managed identity and are not configured here. The [Foundry project/agent outbound path](https://learn.microsoft.com/azure/foundry/how-to/configure-private-link) is separate from inbound inference; its connections to storage, Azure AI Search, and telemetry are not established by this runbook.
+
+The [detailed SVG](./docs/diagrams/apim-foundry-example.svg) and [editable Excalidraw diagram](./docs/diagrams/apim-foundry-example.excalidraw) show the core runbook configuration only.
+
+## About this runbook
+
 This runbook describes an example model, gateway, token-governance, Content Safety, and reporting configuration. All Azure configuration changes are made through browser portals, including the APIM policy code editor. There are no Terraform, Azure CLI, Cloud Shell, or application-code deployment steps. Section 9.4 adds an optional local PowerShell step for Windows desktop clients.
 
 > **Anonymized examples:** Resource names, deployment names, tenant/subscription/application identifiers, endpoints, and dashboard names in this runbook are fictitious or placeholders. Hosts under `example.invalid` do not resolve. Replace these examples consistently with your own environment's values before using any portal instructions, templates, policies, or queries. Never put actual keys in this document.
@@ -27,55 +50,6 @@ This runbook describes an example model, gateway, token-governance, Content Safe
 13. [Appendix A: Content Safety fragment](#appendix-a-content-safety-fragment)
 14. [Appendix B: per-model API policy](#appendix-b-per-model-api-policy)
 15. [References](#references)
-
-## Architecture overview
-
-This conceptual diagram reflects the anonymized example in this runbook; it is not a live Azure inventory. The APIM inbound private endpoint is pre-created, but its use by a particular client is not assumed.
-
-```mermaid
-graph LR
-    CLIENT["Client applications<br/>Product-scoped subscription key"]
-    INBOUND["APIM inbound private endpoint<br/>Pre-created"]
-    SAFETY["Content Safety S0<br/>Public HTTPS endpoint<br/>Text analysis and prompt shields"]
-
-    subgraph APIM["API Management - Standard v2"]
-        GATEWAY["Gateway<br/>Four APIs, products, and subscriptions"]
-        POLICY["Per-API policies<br/>Model pinning, token limits,<br/>request validation and safety"]
-        KEYS["Secret named values<br/>Foundry and Content Safety keys"]
-        GATEWAY -->|"Apply route policy"| POLICY
-        KEYS -.->|"Credential references"| POLICY
-    end
-
-    subgraph NETWORK["Existing virtual network"]
-        EGRESS["APIM outbound subnet"]
-        PRIVATE_ENDPOINT["Foundry private endpoint<br/>Private-endpoint subnet"]
-        EGRESS -->|"Private connectivity"| PRIVATE_ENDPOINT
-    end
-
-    subgraph FOUNDRY["Azure AI Foundry"]
-        ACCOUNT["Account and project<br/>Public network access disabled"]
-        MODELS["Four model deployments<br/>DeepSeek, Kimi, Sonnet, GPT"]
-        ACCOUNT -->|"Pinned deployment"| MODELS
-    end
-
-    subgraph MONITORING["Monitoring and reporting"]
-        INSIGHTS["Application Insights<br/>Token metrics and diagnostics<br/>No request/response bodies or headers"]
-        WORKSPACE["Linked Log Analytics workspace"]
-        GRAFANA["Embedded Grafana<br/>Existing Azure Monitor datasource"]
-        INSIGHTS -->|"Workspace-based telemetry"| WORKSPACE
-        INSIGHTS -->|"Resource-context customMetrics"| GRAFANA
-    end
-
-    CLIENT -->|"HTTPS and product key"| GATEWAY
-    INBOUND -.->|"Private ingress if used"| GATEWAY
-    POLICY -->|"1. API-key safety checks"| SAFETY
-    SAFETY -->|"2. Pass/block; fail closed on errors"| POLICY
-    POLICY ==>|"3. Inference after successful checks"| EGRESS
-    PRIVATE_ENDPOINT -->|"Private connection"| ACCOUNT
-    POLICY -->|"Token metrics and diagnostics"| INSIGHTS
-```
-
-The linked workspace can be in a separate managed resource group. Storage is assumed to exist, but no storage relationship is specified in this runbook. An [editable Excalidraw diagram](./docs/diagrams/apim-foundry-example.excalidraw) is also available.
 
 ## 1. Resource names and final configuration
 

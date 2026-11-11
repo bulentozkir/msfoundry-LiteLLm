@@ -1,8 +1,10 @@
-# TOGG Foundry and APIM: Azure Portal administrator runbook
+# Azure AI Foundry and APIM: Azure Portal administrator runbook
 
-This runbook reproduces the final model, gateway, token-governance, Content Safety, and reporting configuration from the November 2026 session. All Azure configuration changes are made through browser portals, including the APIM policy code editor. There are no Terraform, Azure CLI, Cloud Shell, or application-code deployment steps. Section 9.4 adds an optional local PowerShell step for Windows desktop clients.
+This runbook describes an example model, gateway, token-governance, Content Safety, and reporting configuration. All Azure configuration changes are made through browser portals, including the APIM policy code editor. There are no Terraform, Azure CLI, Cloud Shell, or application-code deployment steps. Section 9.4 adds an optional local PowerShell step for Windows desktop clients.
 
-> **Updated November 9, 2026:** Use four independent model APIs, products, and product-scoped subscriptions. The earlier combined OpenAI API, combined product, and combined subscription have been removed. Do not recreate the combined gateway route.
+> **Anonymized examples:** Resource names, deployment names, tenant/subscription/application identifiers, endpoints, and dashboard names in this runbook are fictitious or placeholders. Hosts under `example.invalid` do not resolve. Replace these examples consistently with your own environment's values before using any portal instructions, templates, policies, or queries. Never put actual keys in this document.
+>
+> **Configuration:** Use four independent model APIs, products, and product-scoped subscriptions. Do not recreate a combined gateway route.
 
 > **Assumptions:** APIM, Foundry, the Foundry project, storage, Application Insights and its workspace, Content Safety, networking, private endpoints, and the Azure Monitor/Application Insights implicit Grafana experience are already available. Subscription-level `Microsoft.Dashboard` registration is resolved. Infrastructure creation and identity provisioning are outside this runbook.
 
@@ -28,32 +30,32 @@ This runbook reproduces the final model, gateway, token-governance, Content Safe
 
 ### Existing Azure resources
 
-Open the [RG-AI-APIM-FOUNDRY resource group](https://portal.azure.com/#@togg.onmicrosoft.com/resource/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/overview).
+Open the [Azure Portal](https://portal.azure.com/) and select your resource group.
 
-| Item | Name/value used in the session |
+| Item | Example name/value |
 |---|---|
-| Directory | `togg.onmicrosoft.com` |
-| Tenant ID | `1414d006-f666-432a-af47-ee47eca66d66` |
-| Subscription | `Subs-Togg-IT` / `4be00143-6ced-4790-bba8-78efc2c755fd` |
-| Resource group | `RG-AI-APIM-FOUNDRY` |
-| Region | `Sweden Central` / `swedencentral` |
-| Foundry account | `TOGG-AI-PLATFORM-FOUNDRY-02` |
-| Foundry project | `proj-default` |
-| APIM service | `TOGG-AI-PLATFORM-APIM` |
+| Directory | `<TENANT_DOMAIN>` |
+| Tenant ID | `<TENANT_ID>` |
+| Subscription | `<AZURE_SUBSCRIPTION_NAME>` / `<AZURE_SUBSCRIPTION_ID>` |
+| Resource group | `example-resource-group` |
+| Region | `<AZURE_REGION>` / `<AZURE_REGION_CODE>` |
+| Foundry account | `example-foundry` |
+| Foundry project | `example-project` |
+| APIM service | `example-apim` |
 | APIM tier | `Standard v2` |
-| Application Insights | `APPI-AI-PLATFORM-FOUNDRY` |
-| Application Insights App ID | `78c3ac8d-1b00-4bc2-ba20-a30bdc81bc33` |
-| Linked Log Analytics workspace | `managed-APPI-AI-PLATFORM-FOUNDRY-ws` |
-| Dedicated Content Safety account | `TOGG-AI-PLATFORM-CONTENT-SAFETY-02`, SKU `S0` |
-| VNet | `VNET-AI-APIM-FOUNDRY-PROD` |
-| APIM outbound subnet | `SN-AI-APIM-OUTBOUND` |
-| Foundry private-endpoint subnet | `SN-AI-FOUNDRY-INBOUND` |
-| Foundry private endpoint | `NIC-AI-FOUNDRY-INBOUND-01` |
-| APIM inbound private endpoint | `AI-PLATFORM-APIM-INBOUND` |
+| Application Insights | `example-app-insights` |
+| Application Insights App ID | `<APPLICATION_INSIGHTS_APP_ID>` |
+| Linked Log Analytics workspace | `example-log-analytics-workspace` |
+| Dedicated Content Safety account | `example-content-safety`, SKU `S0` |
+| VNet | `example-vnet` |
+| APIM outbound subnet | `example-apim-subnet` |
+| Foundry private-endpoint subnet | `example-foundry-subnet` |
+| Foundry private endpoint | `example-foundry-private-endpoint` |
+| APIM inbound private endpoint | `example-apim-private-endpoint` |
 
-The linked workspace is in its existing managed resource group, not necessarily `RG-AI-APIM-FOUNDRY`. Existing storage is assumed ready; no storage resource names were established or storage settings changed in the session.
+The linked workspace can be in a separate managed resource group, not necessarily `example-resource-group`. Existing storage is assumed ready; this runbook does not change storage settings.
 
-Use **`APPI-AI-PLATFORM-FOUNDRY`**, not the similarly named `APPI-AI-PLATFORM-FOUNDRY-01`.
+Use **`example-app-insights`**, not the similarly named `example-app-insights-alternate`.
 
 ### Authentication and networking boundaries
 
@@ -63,21 +65,21 @@ Use **`APPI-AI-PLATFORM-FOUNDRY`**, not the similarly named `APPI-AI-PLATFORM-FO
 - Application Insights ingestion uses its existing **instrumentation key** connection.
 - Do not add OAuth/OpenID settings, JWT validation, managed-identity backend authentication, app registrations, or new role assignments.
 - Keep Foundry **public network access disabled** and local/API-key authentication enabled. Its private connectivity is precreated.
-- The dedicated Content Safety resource used in the session has **public network access enabled**, API-key authentication enabled, and no managed identity. APIM calls it over HTTPS. Do not open Foundry public access to make Content Safety work.
+- This example assumes that the dedicated Content Safety resource has **public network access enabled**, API-key authentication enabled, and no managed identity. APIM calls it over HTTPS. Do not open Foundry public access to make Content Safety work.
 - Grafana reporting uses the precreated Azure Monitor connection in the **Application Insights embedded Grafana experience**. Do not create a separate Managed Grafana workspace.
 
 ### Model deployments
 
-These are the latest deployable releases selected during the session, not a promise that they remain the latest catalog releases indefinitely.
+These catalog models and deployment names are examples. Confirm model availability, versions, and allocations in your own environment.
 
-| Deployment/model name | Publisher format | Version | Deployment type | Model TPM allocation | Capacity units / RPM |
-|---|---|---|---|---:|---:|
-| `DeepSeek-V4.1-Flash-1017` | `DeepSeek` | `2026-10-17` | Global Standard | 10,000,000 | 10,000 |
-| `Kimi-K3.1-Pro` | `MoonshotAI` | `2026-11-04` | Global Standard | 5,000,000 | 5,000 |
-| `claude-sonnet-5-5` | `Anthropic`, hosted on Azure | `2` | Global Standard | 10,000,000 | 10,000 |
-| `gpt-6.1-sol` | `OpenAI` | `2026-09-29` | Global Standard | 10,000,000 | 10,000 |
+| Catalog model | Example deployment name | Publisher format | Version | Deployment type | Model TPM allocation | Capacity units / RPM |
+|---|---|---|---|---|---:|---:|
+| DeepSeek V4.1 Flash | `example-deepseek-deployment` | `DeepSeek` | `2026-10-17` | Global Standard | 10,000,000 | 10,000 |
+| Kimi K3.1 Pro | `example-kimi-deployment` | `MoonshotAI` | `2026-11-04` | Global Standard | 5,000,000 | 5,000 |
+| Claude Sonnet 5.5 | `example-sonnet-deployment` | `Anthropic`, hosted on Azure | `2` | Global Standard | 10,000,000 | 10,000 |
+| GPT Sol 6.1 | `example-gpt-deployment` | `OpenAI` | `2026-09-29` | Global Standard | 10,000,000 | 10,000 |
 
-All four deployments reported **`Microsoft.DefaultV2`** in their persisted configuration. Available provider-specific safety features can differ; retain the APIM Content Safety checks for every model. The DeepSeek release was cataloged as preview; confirm the current lifecycle status before production use.
+Configure and verify **`Microsoft.DefaultV2`** on all four deployments. Available provider-specific safety features can differ; retain the APIM Content Safety checks for every model. The DeepSeek release was cataloged as preview; confirm the current lifecycle status before production use.
 
 The model allocations above are different from the deliberately lower **APIM consumer limits** below.
 
@@ -86,13 +88,13 @@ The model allocations above are different from the deliberately lower **APIM con
 | Setting | Final value |
 |---|---|
 | Access model | One API, product, and subscription per model; no combined subscription |
-| Public base URL | `https://togg-ai-platform-apim.azure-api.net` |
-| DeepSeek operation | `POST /deepseek-v4-1/chat/completions` |
-| Kimi operation | `POST /kimi-k3-1-pro/chat/completions` |
-| GPT operation | `POST /gpt-6-1-sol/chat/completions` |
-| Sonnet operation | `POST /claude-sonnet-5-5/messages` |
-| Chat Completions backend | `https://togg-ai-platform-foundry-02.services.ai.azure.com/openai/v1/chat/completions` |
-| Sonnet Messages backend | `https://togg-ai-platform-foundry-02.services.ai.azure.com/anthropic/v1/messages` |
+| Public base URL | `https://gateway.example.invalid` |
+| DeepSeek operation | `POST /example-deepseek/chat/completions` |
+| Kimi operation | `POST /example-kimi/chat/completions` |
+| GPT operation | `POST /example-gpt/chat/completions` |
+| Sonnet operation | `POST /example-sonnet/messages` |
+| Chat Completions backend | `https://foundry.example.invalid/openai/v1/chat/completions` |
+| Sonnet Messages backend | `https://foundry.example.invalid/anthropic/v1/messages` |
 | Client API version query | Not required on the per-model endpoints |
 | Tokens/minute per subscription | `100000` |
 | Daily token quota per subscription | `1000000`, period `Daily` |
@@ -100,7 +102,7 @@ The model allocations above are different from the deliberately lower **APIM con
 | Consumed-token header | `x-tokens-consumed` |
 | Remaining-minute header | `x-ratelimit-remaining-tokens` |
 | Remaining-daily-quota header | `x-ratelimit-remaining-daily-tokens` |
-| Token metric namespace | `togg-foundry-models` |
+| Token metric namespace | `example-foundry-models` |
 | Custom metric dimensions | `API ID`, `Subscription ID`, `Model` |
 | Content Safety text mode | `EightSeverityLevels` |
 | Moderation rule | Allow severity `0`; block `1` through `7` in all four categories |
@@ -110,7 +112,7 @@ The model allocations above are different from the deliberately lower **APIM con
 | Product approval | Disabled |
 | Subscription required | Enabled |
 
-> **Do not copy the screenshots blindly:** a literal APIM harm threshold of `0` blocks even harmless severity-0 content. The implemented strict usable rule blocks `>= 1`. Do not rely on OpenAI prompt-token estimation for DeepSeek and Kimi; the provided policies consistently use actual response usage for all four models.
+> **Set the harm threshold carefully:** a literal APIM harm threshold of `0` blocks even harmless severity-0 content. The example rule blocks `>= 1`. Do not rely on OpenAI prompt-token estimation for DeepSeek and Kimi; the provided policies consistently use actual response usage for all four models.
 
 ### Per-model access reference
 
@@ -118,12 +120,12 @@ Each row has its own published product and active subscription. All four product
 
 | Model | API and product identifier | Subscription identifier | Public POST path |
 |---|---|---|---|
-| DeepSeek V4.1 Flash | `deepseek-v4-1` | `deepseek-v4-1-subscription` | `/deepseek-v4-1/chat/completions` |
-| Kimi K3.1 Pro | `kimi-k3-1-pro` | `kimi-k3-1-pro-subscription` | `/kimi-k3-1-pro/chat/completions` |
-| Claude Sonnet 5.5 | `claude-sonnet-5-5` | `claude-sonnet-5-5-subscription` | `/claude-sonnet-5-5/messages` |
-| GPT Sol 6.1 | `gpt-6-1-sol` | `gpt-6-1-sol-subscription` | `/gpt-6-1-sol/chat/completions` |
+| DeepSeek V4.1 Flash | `example-deepseek` | `example-deepseek-subscription` | `/example-deepseek/chat/completions` |
+| Kimi K3.1 Pro | `example-kimi` | `example-kimi-subscription` | `/example-kimi/chat/completions` |
+| Claude Sonnet 5.5 | `example-sonnet` | `example-sonnet-subscription` | `/example-sonnet/messages` |
+| GPT Sol 6.1 | `example-gpt` | `example-gpt-subscription` | `/example-gpt/chat/completions` |
 
-Prefix each path with `https://togg-ai-platform-apim.azure-api.net`. The model's Foundry deployment name and its APIM identifier are not always identical: GPT's deployment is **`gpt-6.1-sol`**, but its API/product identifier is **`gpt-6-1-sol`**.
+Prefix each path with the APIM gateway URL from section 1. The example deployment names in the previous table are distinct from these API/product identifiers; use the corresponding values consistently in your environment.
 
 For every model, clients send the **APIM product subscription key** using `Ocp-Apim-Subscription-Key`. In particular, Sonnet clients do not need a Foundry `x-api-key`: APIM injects that backend credential. Do not copy backend keys into a client.
 
@@ -132,10 +134,10 @@ For every model, clients send the **APIM product subscription key** using `Ocp-A
 1. Use the administrator's **already authenticated Microsoft Edge profile**.
 2. Open [Azure Portal](https://portal.azure.com/).
 3. Select the account/directory control in the upper-right corner.
-4. Select **Switch directory** and choose `togg.onmicrosoft.com`.
-5. Open **Subscriptions** and select `Subs-Togg-IT`.
-6. Verify subscription ID `4be00143-6ced-4790-bba8-78efc2c755fd`.
-7. Open **Resource groups** > **RG-AI-APIM-FOUNDRY**.
+4. Select **Switch directory** and choose `<TENANT_DOMAIN>`.
+5. Open **Subscriptions** and select `<AZURE_SUBSCRIPTION_NAME>`.
+6. Verify subscription ID `<AZURE_SUBSCRIPTION_ID>`.
+7. Open **Resource groups** > **example-resource-group**.
 
 The administrator must already have permission to manage these resources, create/edit APIM APIs and policies, read the relevant resource keys, read Application Insights data, and save Grafana dashboard resources. `Microsoft.Dashboard` registration and dashboard/data-source access are assumed resolved; do not provision identities as part of this procedure.
 
@@ -145,9 +147,9 @@ Azure Portal opens the Microsoft Foundry browser portal for the model catalog an
 
 ### 3.1 Open the existing project
 
-1. In the resource group, open **TOGG-AI-PLATFORM-FOUNDRY-02**.
+1. In the resource group, open **example-foundry**.
 2. On **Overview**, select **Go to Foundry portal** / **Open in Foundry**.
-3. In the Foundry project selector, select **proj-default** under this account.
+3. In the Foundry project selector, select **example-project** under this account.
 4. Confirm the account, project, subscription, and region before continuing.
 
 Foundry model deployments are account-level resources available to the project; do not create a second account or project.
@@ -155,13 +157,13 @@ Foundry model deployments are account-level resources available to the project; 
 ### 3.2 Deploy DeepSeek
 
 1. Open **Model catalog** / **Discover** > **Models**.
-2. Search for **DeepSeek-V4.1-Flash-1017**.
+2. Search for **DeepSeek V4.1 Flash**.
 3. Select the **Azure-sold/native** offering with format/publisher `DeepSeek`.
 4. Do not select a Hugging Face managed-compute deployment template or an `FW-` Fireworks offering.
 5. Select **Deploy** / **Use this model**.
 6. Select the existing account/project if prompted.
 7. Set:
-   - **Deployment name:** `DeepSeek-V4.1-Flash-1017`
+   - **Deployment name:** `example-deepseek-deployment`
    - **Version:** `2026-10-17`
    - **Deployment type / Token plan:** **Global Standard**, pay-per-token
    - **Tokens per minute rate limit:** `10,000,000`, if still available
@@ -169,28 +171,29 @@ Foundry model deployments are account-level resources available to the project; 
 8. Review and select **Deploy**.
 9. Open **Deployments** / **Models + endpoints** and wait for **Succeeded**.
 
-If the quota slider cannot reach this allocation, use the available quota and record the actual allocation. Do not claim the screenshot value was applied when the subscription cannot allocate it.
+If the quota slider cannot reach this allocation, use the available quota and record the actual allocation. Do not claim the example allocation was applied when the subscription cannot allocate it.
 
 ### 3.3 Deploy Kimi
 
 Repeat the model-catalog procedure with:
 
-- **Model/deployment:** `Kimi-K3.1-Pro`
+- **Catalog model:** Kimi K3.1 Pro
+- **Example deployment name:** `example-kimi-deployment`
 - **Native publisher format:** `MoonshotAI`
 - **Version:** `2026-11-04`
 - **Deployment type:** **Global Standard**, pay-per-token
 - **TPM:** `5,000,000`, if still available
 - **Guardrails:** **DefaultV2** / `Microsoft.DefaultV2`
 
-Do not use `FW-Kimi-K3` or enable Fireworks for this runbook. The final session used the latest deployable native Kimi model instead.
+Do not use `FW-Kimi-K3` or enable Fireworks for this runbook. Use the native Kimi model instead.
 
 ### 3.4 Deploy Claude Sonnet 5.5
 
-1. In the same **proj-default** model catalog, select **claude-sonnet-5-5**.
+1. In the same **example-project** model catalog, select **Claude Sonnet 5.5**.
 2. Select **Deploy** > **Custom settings**.
 3. Select **Version 2: Hosted on Azure**, not version 1 hosted on Anthropic infrastructure.
-4. Review the provider/Marketplace terms and submit the organization's accurate industry, country, and legal-entity details. The session used **Manufacturing** and the existing TOGG tenant's organization/country metadata.
-5. Set **Deployment name:** `claude-sonnet-5-5`, **Global Standard**, and up to **10,000,000 TPM** of available allocation.
+4. Review the provider/Marketplace terms and submit your organization's accurate industry, country, and legal-entity details. Do not include those details in this runbook.
+5. Set **Deployment name:** `example-sonnet-deployment`, **Global Standard**, and up to **10,000,000 TPM** of available allocation.
 6. Deploy and wait for **Succeeded**.
 7. Verify version `2` and the persisted guardrail configuration.
 
@@ -200,7 +203,8 @@ The native inference protocol is **Anthropic Messages**, not OpenAI Chat Complet
 
 Repeat the native model-catalog procedure with:
 
-- **Model/deployment:** `gpt-6.1-sol`
+- **Catalog model:** GPT Sol 6.1
+- **Example deployment name:** `example-gpt-deployment`
 - **Publisher format:** `OpenAI`
 - **Version:** `2026-09-29`
 - **Deployment type:** **Global Standard**, pay-per-token
@@ -220,7 +224,7 @@ Wait for **Succeeded**. GPT uses **Chat Completions** and its native completion 
 7. Verify the existing private endpoint is **Approved**.
 8. Open **Keys and Endpoint** and confirm local/API-key access is available. Do not disable local authentication.
 
-`Kimi-K3.1-Pro` can return the provider's canonical response model name **`Kimi-K3.1`**. That response label alone does not mean a different deployment was selected.
+The Kimi deployment can return the provider's canonical response model name **`Kimi-K3.1`**. That response label alone does not mean a different deployment was selected.
 
 ## 4. Store backend keys in APIM
 
@@ -228,26 +232,26 @@ Keep real keys out of this document, dashboard JSON, policy XML, screenshots, an
 
 ### 4.1 Foundry key
 
-1. Open **TOGG-AI-PLATFORM-FOUNDRY-02** > **Keys and Endpoint**.
+1. Open **example-foundry** > **Keys and Endpoint**.
 2. Copy **KEY 1** using the portal copy control.
-3. Open **TOGG-AI-PLATFORM-APIM**.
+3. Open **example-apim**.
 4. Select **APIs** > **Named values** > **+ Add**.
 5. Set:
-   - **Name / identifier:** `deepseek-v4-1-foundry-key`
-   - **Display name:** `deepseek-v4-1-foundry-key`
+   - **Name / identifier:** `example-foundry-key`
+   - **Display name:** `example-foundry-key`
    - **Type:** **Secret**
    - **Value:** the Foundry key
 6. Select **Save**.
 
-Despite its historical name, this secret is the **account key used by all four model backends**. It is not a combined client subscription key.
+This secret is the **account key used by all four model backends**. It is not a combined client subscription key.
 
 ### 4.2 Content Safety key
 
-1. Open **TOGG-AI-PLATFORM-CONTENT-SAFETY-02** > **Keys and Endpoint**.
+1. Open **example-content-safety** > **Keys and Endpoint**.
 2. Confirm SKU `S0`, the existing HTTPS endpoint, and API-key access.
 3. Copy **KEY 1**.
 4. In APIM **Named values**, add:
-   - **Name / display name:** `foundry02-content-safety-key`
+   - **Name / display name:** `example-foundry-content-safety-key`
    - **Type:** **Secret**
    - **Value:** the Content Safety key
 5. Select **Save**.
@@ -255,14 +259,14 @@ Despite its historical name, this secret is the **account key used by all four m
 Use the dedicated endpoint:
 
 ```text
-https://togg-ai-platform-content-safety-02.cognitiveservices.azure.com/
+https://content-safety.example.invalid/
 ```
 
-Do not replace it with the private Foundry Cognitive Services endpoint. That endpoint had a missing link in centrally managed private DNS during the session. The dedicated precreated Content Safety resource avoids changing central DNS or opening Foundry public access.
+Do not replace it with the Foundry Cognitive Services endpoint. Verify that APIM can reach the dedicated Content Safety endpoint without opening Foundry public access.
 
 ### 4.3 Existing backend inventory
 
-The initial session also created the APIM backend record **`deepseek-v4-1-backend`** with the Foundry `/openai/v1` URL and an `api-key` named-value reference. It may remain in **APIs** > **Backends**.
+An existing APIM backend record such as **`example-foundry-backend`** may reference the Foundry `/openai/v1` URL and an `api-key` named value.
 
 The **final policies below do not depend on that backend record**. They explicitly select the native backend base URL and set the Foundry `api-key` header (or `x-api-key` for Sonnet) after safety checks. Do not substitute backend-ID credential handling for this final transport without retesting all affected models.
 
@@ -270,17 +274,17 @@ The **final policies below do not depend on that backend record**. They explicit
 
 ### 5.1 Create or verify the logger connection
 
-1. In **TOGG-AI-PLATFORM-APIM**, select **Monitoring** > **Application Insights**.
+1. In **example-apim**, select **Monitoring** > **Application Insights**.
 2. Select **+ Add**.
-3. Choose **APPI-AI-PLATFORM-FOUNDRY** in the existing subscription/resource group.
+3. Choose **example-app-insights** in the existing subscription/resource group.
 4. Choose the existing instrumentation-key connection; do not enable managed identity or add a role assignment.
-5. Use the connection/logger name **`foundry-token-appinsights`** where the form exposes a name.
+5. Use the connection/logger name **`example-appinsights-logger`** where the form exposes a name.
 6. Select **Create** / **Save**.
-7. Verify the connection points to **APPI-AI-PLATFORM-FOUNDRY**, not `-01`.
+7. Verify the connection points to **example-app-insights**, not a similarly named resource.
 
-If the portal assigns a different internal logger identifier, use that actual connection when configuring the API diagnostics. The exported session used `foundry-token-appinsights`; the policy does not hard-code this logger ID.
+If the portal assigns a different internal logger identifier, use that actual connection when configuring the API diagnostics. The policy does not hard-code this logger ID.
 
-Leave the unrelated existing **`azuremonitor`** logger/global diagnostic connection unchanged.
+Leave unrelated existing loggers and global diagnostic connections unchanged.
 
 ### 5.2 API diagnostics settings to apply after API creation
 
@@ -288,7 +292,7 @@ For **each of the four APIs** created in section 7:
 
 1. Open **APIs** > the API > **Settings**.
 2. Find **Diagnostics logs** / **Application Insights**.
-3. Enable logging and choose **foundry-token-appinsights** / the connection to **APPI-AI-PLATFORM-FOUNDRY**.
+3. Enable logging and choose **example-appinsights-logger** / the connection to **example-app-insights**.
 4. Set **Sampling:** `100%`.
 5. Set **Always log errors:** enabled / **All errors**.
 6. Set **Verbosity:** **Information**.
@@ -310,13 +314,13 @@ Do this only after the API and its Application Insights logger exist.
 1. In the Azure Portal search bar, search for **Deploy a custom template**.
 2. Open **Deploy a custom template**.
 3. Select **Build your own template in the editor**.
-4. Paste the configuration template below and select **Save**.
+4. Paste the configuration template below. Replace both `example-apim` references with your APIM service name and update `allowedValues` if your API identifiers differ, then select **Save**.
 5. On **Custom deployment** > **Basics**, select:
-   - **Subscription:** `Subs-Togg-IT`
-   - **Resource group:** `RG-AI-APIM-FOUNDRY`
-   - **Region:** `Sweden Central`
+   - **Subscription:** `<AZURE_SUBSCRIPTION_NAME>`
+   - **Resource group:** `example-resource-group`
+   - **Region:** `<AZURE_REGION>`
    - **Api Name:** the first API identifier from section 7
-   - **Logger Name:** `foundry-token-appinsights`, or the actual logger name assigned in section 5.1
+   - **Logger Name:** `example-appinsights-logger`, or the actual logger name assigned in section 5.1
 6. Select **Review + create** > **Create**.
 7. Wait for **Deployment succeeded**.
 8. Repeat for the other three API identifiers.
@@ -330,20 +334,20 @@ The template updates only the existing API's `applicationinsights` diagnostic. I
   "parameters": {
     "apiName": {
       "type": "string",
-      "allowedValues": ["deepseek-v4-1", "kimi-k3-1-pro", "claude-sonnet-5-5", "gpt-6-1-sol"]
+      "allowedValues": ["example-deepseek", "example-kimi", "example-sonnet", "example-gpt"]
     },
     "loggerName": {
       "type": "string",
-      "defaultValue": "foundry-token-appinsights"
+      "defaultValue": "example-appinsights-logger"
     }
   },
   "resources": [
     {
       "type": "Microsoft.ApiManagement/service/apis/diagnostics",
       "apiVersion": "2024-05-01",
-      "name": "[concat('TOGG-AI-PLATFORM-APIM/', parameters('apiName'), '/applicationinsights')]",
+      "name": "[concat('example-apim/', parameters('apiName'), '/applicationinsights')]",
       "properties": {
-        "loggerId": "[resourceId('Microsoft.ApiManagement/service/loggers', 'TOGG-AI-PLATFORM-APIM', parameters('loggerName'))]",
+        "loggerId": "[resourceId('Microsoft.ApiManagement/service/loggers', 'example-apim', parameters('loggerName'))]",
         "metrics": true,
         "alwaysLog": "allErrors",
         "sampling": {"samplingType": "fixed", "percentage": 100},
@@ -369,15 +373,15 @@ The template updates only the existing API's `applicationinsights` diagnostic. I
 
 The native APIM **`llm-content-safety`** policy requires managed-identity backend authentication in the documented configuration. It is therefore **not** the implementation used here.
 
-1. Open **TOGG-AI-PLATFORM-APIM** > **APIs** > **Policy fragments**.
+1. Open **example-apim** > **APIs** > **Policy fragments**.
 2. Select **+ Add**.
-3. Set **Name:** `foundry02-key-content-safety`.
+3. Set **Name:** `example-foundry-key-content-safety`.
 4. Enter a description such as **API-key text moderation and prompt/document shields**.
 5. Open the fragment code editor.
 6. Paste the complete `<fragment>` block from [Appendix A](#appendix-a-content-safety-fragment).
 7. Select **Save**.
 
-The fragment uses only `{{foundry02-content-safety-key}}`; no actual key is pasted into XML. It:
+The fragment uses only `{{example-foundry-content-safety-key}}`; no actual key is pasted into XML. It:
 
 - Analyzes textual message content using eight severity levels.
 - Blocks any Hate, SelfHarm, Sexual, or Violence result at severity `1` or above.
@@ -402,7 +406,7 @@ For each row below:
 1. In APIM, select **APIs** > **+ Add API** > **HTTP** / **Manually define an HTTP API**.
 2. Select **Full** / advanced form if the identifier is not initially visible.
 3. Enter the exact **Name / API identifier**, display name, and URL suffix.
-4. Set **Web service URL** to `https://togg-ai-platform-foundry-02.services.ai.azure.com/openai/v1` for DeepSeek, Kimi, and GPT; for Sonnet use `https://togg-ai-platform-foundry-02.services.ai.azure.com/anthropic/v1`.
+4. Set **Web service URL** to `https://foundry.example.invalid/openai/v1` for DeepSeek, Kimi, and GPT; for Sonnet use `https://foundry.example.invalid/anthropic/v1`.
 5. Allow **HTTPS** only.
 6. Leave OAuth/OpenID authentication settings unset.
 7. Enable **Subscription required**.
@@ -411,10 +415,10 @@ For each row below:
 
 | API identifier | Display name | API URL suffix |
 |---|---|---|
-| `deepseek-v4-1` | DeepSeek V4.1 | `deepseek-v4-1` |
-| `kimi-k3-1-pro` | Kimi K3.1 Pro | `kimi-k3-1-pro` |
-| `claude-sonnet-5-5` | Claude Sonnet 5.5 | `claude-sonnet-5-5` |
-| `gpt-6-1-sol` | GPT Sol 6.1 | `gpt-6-1-sol` |
+| `example-deepseek` | Example DeepSeek | `example-deepseek` |
+| `example-kimi` | Example Kimi | `example-kimi` |
+| `example-sonnet` | Example Sonnet | `example-sonnet` |
+| `example-gpt` | Example GPT | `example-gpt` |
 
 Do not add a duplicate API if the intended definition already exists. Update that definition instead, preserving unrelated settings.
 
@@ -428,18 +432,18 @@ Do not add a duplicate API if the intended definition already exists. Update tha
 
 | API | Operation identifier | Method | URL template |
 |---|---|---|---|
-| `deepseek-v4-1` | `chat-completions` | POST | `/chat/completions` |
-| `kimi-k3-1-pro` | `chat-completions` | POST | `/chat/completions` |
-| `claude-sonnet-5-5` | `messages` | POST | `/messages` |
-| `gpt-6-1-sol` | `chat-completions` | POST | `/chat/completions` |
+| `example-deepseek` | `chat-completions` | POST | `/chat/completions` |
+| `example-kimi` | `chat-completions` | POST | `/chat/completions` |
+| `example-sonnet` | `messages` | POST | `/messages` |
+| `example-gpt` | `chat-completions` | POST | `/chat/completions` |
 
 The client URLs are:
 
 ```text
-https://togg-ai-platform-apim.azure-api.net/deepseek-v4-1/chat/completions
-https://togg-ai-platform-apim.azure-api.net/kimi-k3-1-pro/chat/completions
-https://togg-ai-platform-apim.azure-api.net/claude-sonnet-5-5/messages
-https://togg-ai-platform-apim.azure-api.net/gpt-6-1-sol/chat/completions
+https://gateway.example.invalid/example-deepseek/chat/completions
+https://gateway.example.invalid/example-kimi/chat/completions
+https://gateway.example.invalid/example-sonnet/messages
+https://gateway.example.invalid/example-gpt/chat/completions
 ```
 
 The earlier combined Azure OpenAI deployment-path API has been removed. Do not use the former account-name URL prefix, create combined products/subscriptions, or add deployment-path operations to these independent APIs.
@@ -456,7 +460,7 @@ For an OpenAI-compatible client, use a custom `base_url` ending in the relevant 
 4. Paste [Appendix B](#appendix-b-per-model-api-policy), replacing the API-level policy document only, and apply the model-specific settings in section 8.2.
 5. Select **Save** and resolve any validation errors before proceeding.
 
-Do not duplicate `<forward-request>` by adding a backend `<base />` before the provided backend block. The session's inherited backend already had a forward request.
+Do not duplicate `<forward-request>` by adding a backend `<base />` before the provided backend block. An inherited backend may already have a forward request.
 
 Each API pins its own model. Product-scoped subscription keys can access only that product's associated API.
 
@@ -464,36 +468,36 @@ Each API pins its own model. Product-scoped subscription keys can access only th
 
 Repeat the **All operations** policy-editor procedure for all four APIs. Appendix B starts with the fixed DeepSeek variable. Set that variable to the model for the API:
 
-For **deepseek-v4-1**:
+For **example-deepseek**:
 
 ```xml
-<set-variable name="selected-model" value="DeepSeek-V4.1-Flash-1017" />
+<set-variable name="selected-model" value="example-deepseek-deployment" />
 ```
 
-For **kimi-k3-1-pro**:
+For **example-kimi**:
 
 ```xml
-<set-variable name="selected-model" value="Kimi-K3.1-Pro" />
+<set-variable name="selected-model" value="example-kimi-deployment" />
 ```
 
-For **gpt-6-1-sol**:
+For **example-gpt**:
 
 ```xml
-<set-variable name="selected-model" value="gpt-6.1-sol" />
+<set-variable name="selected-model" value="example-gpt-deployment" />
 ```
 
-For **claude-sonnet-5-5**:
+For **example-sonnet**:
 
 ```xml
-<set-variable name="selected-model" value="claude-sonnet-5-5" />
+<set-variable name="selected-model" value="example-sonnet-deployment" />
 ```
 
-The fixed variable overrides a client-supplied `model` field. DeepSeek, Kimi, and GPT use the Chat Completions transport in Appendix B. For Sonnet make these additional native-protocol changes in the same editor:
+The fixed variable overrides a client-supplied `model` field and must match the Foundry deployment name, not necessarily the API identifier. If your deployment names differ from the examples, also update the GPT and Kimi comparisons in Appendix B, the Logs query, and the dashboard model filters. DeepSeek, Kimi, and GPT use the Chat Completions transport in Appendix B. For Sonnet make these additional native-protocol changes in the same editor:
 
-1. Replace the `foundry02-generation-body` variable with:
+1. Replace the `example-foundry-generation-body` variable with:
 
    ```xml
-   <set-variable id="client-body" name="foundry02-generation-body" value='@{
+   <set-variable id="client-body" name="example-foundry-generation-body" value='@{
      var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
      body["model"] = (string)context.Variables["selected-model"];
      return body.ToString();
@@ -504,7 +508,7 @@ The fixed variable overrides a client-supplied `model` field. DeepSeek, Kimi, an
 
    ```xml
    <set-body id="client-system"><![CDATA[@{
-     var body = JObject.Parse((string)context.Variables["foundry02-generation-body"]);
+     var body = JObject.Parse((string)context.Variables["example-foundry-generation-body"]);
      var messages = body["messages"] as JArray;
      if (messages == null || messages.Count == 0) { throw new Exception("messages must be a nonempty array"); }
      var system = body["system"];
@@ -522,11 +526,11 @@ The fixed variable overrides a client-supplied `model` field. DeepSeek, Kimi, an
    }]]></set-body>
    ```
 
-3. Set the backend base URL to `https://togg-ai-platform-foundry-02.services.ai.azure.com/anthropic/v1` and the rewrite template to `/messages`.
+3. Set the backend base URL to `https://foundry.example.invalid/anthropic/v1` and the rewrite template to `/messages`.
 4. Remove any client `x-api-key` header along with the other caller credentials. Replace the final Foundry `api-key` override with:
 
    ```xml
-   <set-header name="x-api-key" exists-action="override"><value>{{deepseek-v4-1-foundry-key}}</value></set-header>
+   <set-header name="x-api-key" exists-action="override"><value>{{example-foundry-key}}</value></set-header>
    <set-header name="anthropic-version" exists-action="override"><value>2023-06-01</value></set-header>
    ```
 
@@ -541,8 +545,8 @@ In each API policy, verify:
 - **`llm-token-limit`**: `100000` TPM, `1000000` quota, period `Daily`, actual-token accounting.
 - The counter key contains **subscription ID only**, not API ID or model. This prevents a key holder from gaining another daily allowance by switching routes.
 - The per-model request-rate counter includes subscription ID and selected model; limits are 5,000 RPM for Kimi and 10,000 RPM for the other models.
-- **`include-fragment`** points to `foundry02-key-content-safety`.
-- **`llm-emit-token-metric`** emits namespace `togg-foundry-models` and dimensions `API ID`, `Subscription ID`, `Model`.
+- **`include-fragment`** points to `example-foundry-key-content-safety`.
+- **`llm-emit-token-metric`** emits namespace `example-foundry-models` and dimensions `API ID`, `Subscription ID`, `Model`.
 - The original normalized inference body is saved and restored around the safety/helper policies.
 - Client Authorization and credential headers are removed before the genuine Foundry key is applied.
 - Any caller `api-version` parameter is removed **after** rewriting the backend URI.
@@ -567,10 +571,10 @@ For each product:
 
 | Product identifier | Display name | APIs |
 |---|---|---|
-| `deepseek-v4-1` | DeepSeek V4.1 | `deepseek-v4-1` only |
-| `kimi-k3-1-pro` | Kimi K3.1 Pro | `kimi-k3-1-pro` only |
-| `claude-sonnet-5-5` | Claude Sonnet 5.5 | `claude-sonnet-5-5` only |
-| `gpt-6-1-sol` | GPT Sol 6.1 | `gpt-6-1-sol` only |
+| `example-deepseek` | Example DeepSeek | `example-deepseek` only |
+| `example-kimi` | Example Kimi | `example-kimi` only |
+| `example-sonnet` | Example Sonnet | `example-sonnet` only |
+| `example-gpt` | Example GPT | `example-gpt` only |
 
 **Approval disabled does not mean anonymous access.** Subscription keys remain required.
 
@@ -587,10 +591,10 @@ Do not disable subscription protection on an API, create an anonymous product, o
 
 | Subscription identifier | Product scope | Access |
 |---|---|---|
-| `deepseek-v4-1-subscription` | `deepseek-v4-1` | DeepSeek API only |
-| `kimi-k3-1-pro-subscription` | `kimi-k3-1-pro` | Kimi API only |
-| `claude-sonnet-5-5-subscription` | `claude-sonnet-5-5` | Sonnet API only |
-| `gpt-6-1-sol-subscription` | `gpt-6-1-sol` | GPT API only |
+| `example-deepseek-subscription` | `example-deepseek` | DeepSeek API only |
+| `example-kimi-subscription` | `example-kimi` | Kimi API only |
+| `example-sonnet-subscription` | `example-sonnet` | Sonnet API only |
+| `example-gpt-subscription` | `example-gpt` | GPT API only |
 
 Use existing active subscriptions instead of replacing or regenerating their keys. Leave the existing service-wide **master** subscription unchanged.
 
@@ -624,30 +628,30 @@ This persists the variable for your Windows user account; it does not update alr
 
 ### 9.5 Remove the retired combined APIM resources
 
-These three entries were removed during the session. On an existing environment that still contains them, use the following portal-only cleanup; skip any entry that is already absent.
+If an environment still contains retired combined resources, identify them from its own configuration records before performing this portal-only cleanup. The placeholders below are not actual resource names; skip any entry that is already absent.
 
 | Kind | Retired display name | Retired identifier |
 |---|---|---|
-| Subscription | TOGG Foundry 02 models subscription | `togg-foundry-02-subscription` |
-| Product | TOGG-AI-PLATFORM-FOUNDRY-02 models | `togg-foundry-02-models` |
-| API | TOGG-AI-PLATFORM-FOUNDRY-02 OpenAI | `togg-foundry-02-openai` |
+| Subscription | `<LEGACY_SUBSCRIPTION_NAME>` | `<LEGACY_SUBSCRIPTION_ID>` |
+| Product | `<LEGACY_PRODUCT_NAME>` | `<LEGACY_PRODUCT_ID>` |
+| API | `<LEGACY_API_NAME>` | `<LEGACY_API_ID>` |
 
-1. Open **TOGG-AI-PLATFORM-APIM** > **APIs** > **Subscriptions**.
-2. Locate only **TOGG Foundry 02 models subscription**, verify its identifier, and select **Delete**. Do not delete or regenerate any of the four model-specific subscriptions.
-3. Open **Products** > **DeepSeek V4.1** > **APIs**. If the combined OpenAI API is listed, remove that **product association** only; retain the DeepSeek API association.
-4. Repeat for **Products** > **Kimi K3.1 Pro** > **APIs**, retaining the Kimi association.
-5. Open **Products** > **TOGG-AI-PLATFORM-FOUNDRY-02 models** and delete only that combined product. Inspect its subscriptions first; stop if other, unexpected subscriptions would also be deleted.
-6. Open **APIs** > **TOGG-AI-PLATFORM-FOUNDRY-02 OpenAI** and delete only that API, including its revisions if the confirmation asks.
+1. Open the appropriate APIM service > **APIs** > **Subscriptions**.
+2. Locate only `<LEGACY_SUBSCRIPTION_NAME>`, verify its identifier, and select **Delete**. Do not delete or regenerate any of the four model-specific subscriptions.
+3. Open the DeepSeek product's **APIs** tab. If the combined OpenAI API is listed, remove that **product association** only; retain the DeepSeek API association.
+4. Repeat for the Kimi product, retaining the Kimi association.
+5. Open `<LEGACY_PRODUCT_NAME>` and delete only that combined product. Inspect its subscriptions first; stop if other, unexpected subscriptions would also be deleted.
+6. Open `<LEGACY_API_NAME>` and delete only that API, including its revisions if the confirmation asks.
 7. Refresh the API, product, and subscription lists. Verify that the three retired entries are absent and that the four entries in the per-model access reference remain present.
 8. Re-test each model using its own product key and public path. Stop using the former combined route and its deleted subscription key.
 
-Do **not** delete the Foundry account/project/model deployments, Content Safety account, secret named values, `foundry02-key-content-safety` policy fragment, Application Insights logger, or the service-wide master subscription. Those are not retired combined client resources and are still used by the retained APIs.
+Do **not** delete the Foundry account/project/model deployments, Content Safety account, secret named values, `example-foundry-key-content-safety` policy fragment, Application Insights logger, or the service-wide master subscription. Those are not retired combined client resources and are still used by the retained APIs.
 
 ## 10. Enable and verify token reporting
 
 ### 10.1 Application Insights Logs
 
-1. Open **APPI-AI-PLATFORM-FOUNDRY** in Azure Portal.
+1. Open **example-app-insights** in Azure Portal.
 2. Select **Logs**.
 3. Dismiss the example-query gallery if it covers the editor.
 4. Set a time range containing the test requests, such as **Last 24 hours**.
@@ -660,7 +664,7 @@ customMetrics
 | extend Model = tostring(customDimensions["Model"]),
          Subscription = tostring(customDimensions["Subscription ID"]),
          API = tostring(customDimensions["API ID"])
-| where Model in ("DeepSeek-V4.1-Flash-1017", "Kimi-K3.1-Pro", "claude-sonnet-5-5", "gpt-6.1-sol")
+| where Model in ("example-deepseek-deployment", "example-kimi-deployment", "example-sonnet-deployment", "example-gpt-deployment")
 | summarize Tokens = sum(coalesce(valueSum, value))
     by Model, Subscription, API, Metric = name
 | order by Model asc, Metric asc
@@ -668,7 +672,7 @@ customMetrics
 
 Allow time for APIM buffering and Application Insights ingestion. Do not interpret an immediately empty result as proof that the policy was not installed.
 
-Use the **classic Application Insights `customMetrics` schema** for this resource-context report. The supplied dashboard was validated against this schema; do not replace it with `AppMetrics` without changing and validating the queries.
+Use the **classic Application Insights `customMetrics` schema** for this resource-context report and a dashboard compatible with that schema. Do not replace it with `AppMetrics` without changing and validating the queries.
 
 ### 10.2 Correct token accounting
 
@@ -680,7 +684,7 @@ Use the **classic Application Insights `customMetrics` schema** for this resourc
 - Do not add reasoning/cache/prediction categories to Total again; they can already be included in prompt/completion totals.
 - Do not sum the separate aggregate `azure.ai_gateway.client.token.usage` series with these totals.
 
-Actual custom dimensions configured by the policy are **API ID, Subscription ID, Model**. Observed standard dimensions also include **Region, Service ID, Service Name, Service Type**. User ID and Client IP were not added to the report.
+Custom dimensions configured by the policy are **API ID, Subscription ID, Model**. Standard dimensions can also include **Region, Service ID, Service Name, Service Type**. User ID and Client IP are not included in this example report.
 
 ### 10.3 Optional Metrics Explorer dimension splitting
 
@@ -690,34 +694,34 @@ For split-by-dimension charts in the **Metrics** blade:
 2. Select **Custom metrics (Preview)**.
 3. Select **With dimensions**.
 4. Select **OK** / **Save**.
-5. Return to **Metrics**, choose namespace **togg-foundry-models**, and inspect the token metrics and available split dimensions after new telemetry arrives.
+5. Return to **Metrics**, choose namespace **example-foundry-models**, and inspect the token metrics and available split dimensions after new telemetry arrives.
 
-This optional UI toggle was not completed by the automation in the session. It is included here for the administrator to apply manually. The Grafana report below uses **Logs dimensions** and does **not** require this Metrics Explorer opt-in.
+This optional UI setting can be applied manually. A Grafana report using **Logs dimensions** does **not** require this Metrics Explorer opt-in.
 
 ## 11. Import the Grafana report inside Application Insights
 
 Use the **existing implicit Grafana experience in Azure Portal**, not a new standalone Grafana server and not a new Managed Grafana workspace.
 
-The supplied file is [togg-token-consumption-grafana.json](https://github.com/bulentozkir/msfoundry-LiteLLm/blob/main/togg-token-consumption-grafana.json). Download/save the latest four-model version locally from GitHub so the portal file picker can select it; use GitHub's raw-file download, not **Save page as**, which can save HTML instead of JSON. Confirm that the downloaded JSON contains `claude-sonnet-5-5` and `gpt-6.1-sol` in both the model selector and panel queries.
+Use a four-model Grafana dashboard JSON from an approved source and save it locally so the portal file picker can select it. Update its model selector and panel queries to use your deployment names. This runbook does not sanitize dashboard files: before sharing a dashboard, separately remove customer-specific resource IDs, names, endpoints, titles, UIDs, and tags.
 
 ### 11.1 Import the dashboard
 
-1. In Azure Portal, open **APPI-AI-PLATFORM-FOUNDRY**.
+1. In Azure Portal, open **example-app-insights**.
 2. Select **Dashboards with Grafana** in the left menu.
 3. In the embedded Grafana/gallery interface, select **New** > **Import**.
 4. Choose **Upload JSON file** / the file picker.
-5. Select the downloaded [togg-token-consumption-grafana.json](https://github.com/bulentozkir/msfoundry-LiteLLm/blob/main/togg-token-consumption-grafana.json) file.
+5. Select the dashboard JSON file.
 6. Select **Load**.
-7. Use title **TOGG Foundry - Input and Output Tokens**.
+7. Use a non-identifying title, such as **Example Foundry - Input and Output Tokens**.
 8. If the importer asks to resolve **Existing Azure Monitor datasource / DS_AZURE_MONITOR**, select the existing built-in/preconfigured **Azure Monitor** datasource. Do not add credentials or create a new datasource identity.
 9. Verify the destination:
-   - **Subscription:** `Subs-Togg-IT` / `4be00143-6ced-4790-bba8-78efc2c755fd`
-   - **Resource group:** `RG-AI-APIM-FOUNDRY`
-   - **Region:** `Sweden Central`
+   - **Subscription:** `<AZURE_SUBSCRIPTION_NAME>` / `<AZURE_SUBSCRIPTION_ID>`
+   - **Resource group:** `example-resource-group`
+   - **Region:** `<AZURE_REGION>`
 10. Select **Import** / **Save** to complete the form.
 11. If the imported view is not yet saved, select **Save** / **Save As**, confirm these destination fields, and save it as a dashboard Azure resource.
 
-The JSON dashboard UID is **`togg-foundry-token-report`**. That UID is not the name of a Grafana workspace.
+Use a non-identifying dashboard UID, such as **`example-foundry-token-report`**. The UID is not the name of a Grafana workspace.
 
 ### 11.2 Verify and, if necessary, map the panel datasource
 
@@ -726,11 +730,11 @@ The JSON dashboard UID is **`togg-foundry-token-report`**. That UID is not the n
 3. Verify:
    - **Datasource:** the existing **Azure Monitor** datasource
    - **Service/query type:** **Azure Log Analytics**
-   - **Resource:** **APPI-AI-PLATFORM-FOUNDRY**
+   - **Resource:** **example-app-insights**
    - **Resource ID:**
 
 ```text
-/subscriptions/4be00143-6ced-4790-bba8-78efc2c755fd/resourceGroups/RG-AI-APIM-FOUNDRY/providers/Microsoft.Insights/components/APPI-AI-PLATFORM-FOUNDRY
+/subscriptions/<AZURE_SUBSCRIPTION_ID>/resourceGroups/example-resource-group/providers/Microsoft.Insights/components/example-app-insights
 ```
 
 4. Use **Table** result format for the stat/table panels and **Time series** for the trend panel.
@@ -754,12 +758,12 @@ Set **Time range:** Last 24 hours and **Refresh:** 1 minute.
 
 Use:
 
-- **Model:** All, DeepSeek V4.1 Flash, Kimi K3.1 Pro, Claude Sonnet 5.5, or GPT Sol 6.1.
+- **Model:** All, or one of the four deployment names from section 3.
 - **Break down by:** Model, Subscription, API, Region, Service ID, Service name, or Service type.
 
-Reimport the updated dashboard JSON when adding models: version 2 includes all four model filters. Updating a repository file does not automatically update an already saved portal dashboard. All five panel queries must include the new models; adding dropdown options alone is insufficient. Compare the chart/table totals with Application Insights Logs for the same time range.
+Reimport the updated dashboard JSON when adding models. Updating a local file does not automatically update an already saved portal dashboard. All five panel queries must include the new models; adding dropdown options alone is insufficient. Compare the chart/table totals with Application Insights Logs for the same time range.
 
-The four-model dashboard's **21 query variants** were validated against the existing Application Insights resource. Sonnet's native input/output usage is emitted through APIM as the same **Prompt Tokens**, **Completion Tokens**, and **Total Tokens** metrics used for the other models, with `Model=claude-sonnet-5-5`.
+Validate the dashboard query variants against your Application Insights resource. Sonnet's native input/output usage is emitted through APIM as the same **Prompt Tokens**, **Completion Tokens**, and **Total Tokens** metrics used for the other models, with the selected Sonnet deployment name as `Model`.
 
 ### 11.4 Ensure it appears in the App Insights gallery
 
@@ -771,9 +775,9 @@ Dashboards created/imported **inside Application Insights** receive the gallery 
    - **Name:** `GrafanaDashboardResourceType`
    - **Value:** `microsoft.insights/components`
 4. Save.
-5. Return to **APPI-AI-PLATFORM-FOUNDRY** > **Dashboards with Grafana** and refresh **Saved dashboards**.
+5. Return to **example-app-insights** > **Dashboards with Grafana** and refresh **Saved dashboards**.
 
-The ordinary JSON tags such as `TOGG` and `tokens` do not replace this Azure resource tag.
+Ordinary JSON tags such as `example` and `tokens` do not replace this Azure resource tag.
 
 Dashboard readers/editors and the existing Azure Monitor datasource permissions are assumed preconfigured. A dashboard share link does not grant access to its underlying Application Insights data.
 
@@ -781,7 +785,7 @@ Dashboard readers/editors and the existing Azure Monitor datasource permissions 
 
 ### 12.1 Test the model APIs from APIM
 
-1. Open **TOGG-AI-PLATFORM-APIM** > **APIs** > **deepseek-v4-1**.
+1. Open **example-apim** > **APIs** > **example-deepseek**.
 2. Select **chat-completions** > **Test**.
 3. Use the DeepSeek product subscription, not the default master key.
 4. Set its actual `Ocp-Apim-Subscription-Key` header and **Content-Type = application/json**.
@@ -801,8 +805,8 @@ Dashboard readers/editors and the existing Azure Monitor datasource permissions 
    - `x-tokens-consumed`
    - `x-ratelimit-remaining-tokens`
    - `x-ratelimit-remaining-daily-tokens`
-9. Repeat on **kimi-k3-1-pro** > **chat-completions** using the Kimi product key.
-10. Repeat on **gpt-6-1-sol** > **chat-completions** using its product key and this native body:
+9. Repeat on **example-kimi** > **chat-completions** using the Kimi product key.
+10. Repeat on **example-gpt** > **chat-completions** using its product key and this native body:
 
 ```json
 {
@@ -812,7 +816,7 @@ Dashboard readers/editors and the existing Azure Monitor datasource permissions 
 }
 ```
 
-11. For **claude-sonnet-5-5** > **messages**, use its product key and this native Messages body:
+11. For **example-sonnet** > **messages**, use its product key and this native Messages body:
 
 ```json
 {
@@ -864,7 +868,7 @@ A client interruption can make streaming token telemetry incomplete. Do not clas
 
 ### 12.4 Administrator checklist
 
-- [ ] Correct directory, subscription, resource group, account and `proj-default`.
+- [ ] Correct directory, subscription, resource group, account and `example-project`.
 - [ ] All four exact native deployments are Succeeded, with recorded allocation and guardrail settings.
 - [ ] Foundry remains private and API-key authentication remains enabled.
 - [ ] Dedicated Content Safety S0 endpoint is reachable and keyed; no managed identity added.
@@ -883,12 +887,12 @@ A client interruption can make streaming token telemetry incomplete. Do not clas
 
 ## Appendix A: Content Safety fragment
 
-Paste this entire block into **Policy fragments** > **foundry02-key-content-safety**. XML entities such as `&lt;` and `&amp;` are intentional in attribute expressions.
+Paste this entire block into **Policy fragments** > **example-foundry-key-content-safety**. XML entities such as `&lt;` and `&amp;` are intentional in attribute expressions.
 
 ```xml
 <fragment>
-  <set-variable name="foundry02-safety-completed" value="@(false)" />
-  <set-variable id="safety-input" name="foundry02-safety-input" value='@{
+  <set-variable name="example-foundry-safety-completed" value="@(false)" />
+  <set-variable id="safety-input" name="example-foundry-safety-input" value='@{
     var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
     var messages = body["messages"] as JArray;
     if (messages == null || messages.Count == 0) { throw new Exception("messages must be a nonempty array"); }
@@ -931,7 +935,7 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
     return result.ToString();
   }' />
   <choose>
-    <when condition='@((int)JObject.Parse((string)context.Variables["foundry02-safety-input"])["codePoints"] &gt; 10000)'>
+    <when condition='@((int)JObject.Parse((string)context.Variables["example-foundry-safety-input"])["codePoints"] &gt; 10000)'>
       <return-response>
         <set-status code="403" reason="Request rejected" />
         <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
@@ -940,21 +944,21 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
     </when>
   </choose>
   <choose>
-    <when condition='@(!string.IsNullOrWhiteSpace((string)JObject.Parse((string)context.Variables["foundry02-safety-input"])["text"]))'>
-      <send-request id="safety-analyze" mode="new" response-variable-name="foundry02-moderation" timeout="20" ignore-error="false">
-        <set-url>https://togg-ai-platform-content-safety-02.cognitiveservices.azure.com/contentsafety/text:analyze?api-version=2024-09-01</set-url>
+    <when condition='@(!string.IsNullOrWhiteSpace((string)JObject.Parse((string)context.Variables["example-foundry-safety-input"])["text"]))'>
+      <send-request id="safety-analyze" mode="new" response-variable-name="example-foundry-moderation" timeout="20" ignore-error="false">
+        <set-url>https://content-safety.example.invalid/contentsafety/text:analyze?api-version=2024-09-01</set-url>
         <set-method>POST</set-method>
         <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
-        <set-header name="Ocp-Apim-Subscription-Key" exists-action="override"><value>{{foundry02-content-safety-key}}</value></set-header>
+        <set-header name="Ocp-Apim-Subscription-Key" exists-action="override"><value>{{example-foundry-content-safety-key}}</value></set-header>
         <set-body><![CDATA[@{
-          var input = JObject.Parse((string)context.Variables["foundry02-safety-input"]);
+          var input = JObject.Parse((string)context.Variables["example-foundry-safety-input"]);
           var request = new JObject(); request["text"] = input["text"];
           request["categories"] = new JArray("Hate", "SelfHarm", "Sexual", "Violence");
           request["outputType"] = "EightSeverityLevels"; return request.ToString();
         }]]></set-body>
       </send-request>
-      <set-variable id="safety-moderation-schema" name="foundry02-moderation-valid" value='@{
-        var response = context.Variables["foundry02-moderation"] as IResponse;
+      <set-variable id="safety-moderation-schema" name="example-foundry-moderation-valid" value='@{
+        var response = context.Variables["example-foundry-moderation"] as IResponse;
         if (response == null || response.StatusCode != 200) { return false; }
         var analysis = response.Body.As&lt;JObject&gt;(preserveContent: true)["categoriesAnalysis"] as JArray;
         if (analysis == null || analysis.Count != 4) { return false; }
@@ -971,7 +975,7 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
         return true;
       }' />
       <choose>
-        <when condition='@(!(bool)context.Variables["foundry02-moderation-valid"])'>
+        <when condition='@(!(bool)context.Variables["example-foundry-moderation-valid"])'>
           <return-response>
             <set-status code="503" reason="Content Safety unavailable" />
             <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
@@ -981,7 +985,7 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
       </choose>
       <choose>
         <when condition='@{
-          var analysis = ((IResponse)context.Variables["foundry02-moderation"]).Body.As&lt;JObject&gt;(preserveContent: true)["categoriesAnalysis"] as JArray;
+          var analysis = ((IResponse)context.Variables["example-foundry-moderation"]).Body.As&lt;JObject&gt;(preserveContent: true)["categoriesAnalysis"] as JArray;
           foreach (var item in analysis) { if ((int)item["severity"] &gt;= 1) { return true; } }
           return false;
         }'>
@@ -992,24 +996,24 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
           </return-response>
         </when>
       </choose>
-      <send-request id="safety-shield" mode="new" response-variable-name="foundry02-shields" timeout="20" ignore-error="false">
-        <set-url>https://togg-ai-platform-content-safety-02.cognitiveservices.azure.com/contentsafety/text:shieldPrompt?api-version=2024-09-01</set-url>
+      <send-request id="safety-shield" mode="new" response-variable-name="example-foundry-shields" timeout="20" ignore-error="false">
+        <set-url>https://content-safety.example.invalid/contentsafety/text:shieldPrompt?api-version=2024-09-01</set-url>
         <set-method>POST</set-method>
         <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
-        <set-header name="Ocp-Apim-Subscription-Key" exists-action="override"><value>{{foundry02-content-safety-key}}</value></set-header>
+        <set-header name="Ocp-Apim-Subscription-Key" exists-action="override"><value>{{example-foundry-content-safety-key}}</value></set-header>
         <set-body><![CDATA[@{
-          var input = JObject.Parse((string)context.Variables["foundry02-safety-input"]);
+          var input = JObject.Parse((string)context.Variables["example-foundry-safety-input"]);
           var request = new JObject(); request["userPrompt"] = input["text"]; request["documents"] = input["documents"];
           return request.ToString();
         }]]></set-body>
       </send-request>
-      <set-variable id="safety-shield-schema" name="foundry02-shields-valid" value='@{
-        var response = context.Variables["foundry02-shields"] as IResponse;
+      <set-variable id="safety-shield-schema" name="example-foundry-shields-valid" value='@{
+        var response = context.Variables["example-foundry-shields"] as IResponse;
         if (response == null || response.StatusCode != 200) { return false; }
         var body = response.Body.As&lt;JObject&gt;(preserveContent: true);
         var user = body["userPromptAnalysis"] as JObject;
         if (user == null || user["attackDetected"] == null || user["attackDetected"].Type != JTokenType.Boolean) { return false; }
-        var input = JObject.Parse((string)context.Variables["foundry02-safety-input"]);
+        var input = JObject.Parse((string)context.Variables["example-foundry-safety-input"]);
         var documents = input["documents"] as JArray;
         if (documents.Count &gt; 0) {
           var analyses = body["documentsAnalysis"] as JArray;
@@ -1021,7 +1025,7 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
         return true;
       }' />
       <choose>
-        <when condition='@(!(bool)context.Variables["foundry02-shields-valid"])'>
+        <when condition='@(!(bool)context.Variables["example-foundry-shields-valid"])'>
           <return-response>
             <set-status code="503" reason="Content Safety unavailable" />
             <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
@@ -1031,7 +1035,7 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
       </choose>
       <choose>
         <when condition='@{
-          var body = ((IResponse)context.Variables["foundry02-shields"]).Body.As&lt;JObject&gt;(preserveContent: true);
+          var body = ((IResponse)context.Variables["example-foundry-shields"]).Body.As&lt;JObject&gt;(preserveContent: true);
           if ((bool)body["userPromptAnalysis"]["attackDetected"]) { return true; }
           var documents = body["documentsAnalysis"] as JArray;
           if (documents != null) { foreach (var item in documents) { if ((bool)item["attackDetected"]) { return true; } } }
@@ -1044,7 +1048,7 @@ Paste this entire block into **Policy fragments** > **foundry02-key-content-safe
           </return-response>
         </when>
       </choose>
-      <set-variable name="foundry02-safety-completed" value="@(true)" />
+      <set-variable name="example-foundry-safety-completed" value="@(true)" />
     </when>
   </choose>
 </fragment>
@@ -1062,11 +1066,11 @@ Paste this policy into the model API's **All operations** editor. It defaults to
     <set-header name="api-key" exists-action="delete" />
     <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
     <set-query-parameter name="subscription-key" exists-action="delete" />
-    <set-variable name="selected-model" value="DeepSeek-V4.1-Flash-1017" />
-    <set-variable id="client-body" name="foundry02-generation-body" value='@{
+    <set-variable name="selected-model" value="example-deepseek-deployment" />
+    <set-variable id="client-body" name="example-foundry-generation-body" value='@{
       var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
       body["model"] = (string)context.Variables["selected-model"];
-      if ((string)context.Variables["selected-model"] == "gpt-6.1-sol" &amp;&amp; body["max_tokens"] != null) {
+      if ((string)context.Variables["selected-model"] == "example-gpt-deployment" &amp;&amp; body["max_tokens"] != null) {
         if (body["max_completion_tokens"] != null) { throw new Exception("Specify only one completion-token limit"); }
         body["max_completion_tokens"] = body["max_tokens"]; body.Remove("max_tokens");
       }
@@ -1077,33 +1081,33 @@ Paste this policy into the model API's **All operations** editor. It defaults to
       }
       return body.ToString();
     }' />
-    <set-body>@((string)context.Variables["foundry02-generation-body"])</set-body>
-    <rate-limit-by-key calls='@((string)context.Variables["selected-model"] == "Kimi-K3.1-Pro" ? 5000 : 10000)' renewal-period="60" counter-key='@("foundry02-rpm:" + context.Subscription.Id + ":" + (string)context.Variables["selected-model"])' />
-    <llm-token-limit counter-key='@("foundry02-tokens:" + context.Subscription.Id)' tokens-per-minute="100000" token-quota="1000000" token-quota-period="Daily" estimate-prompt-tokens="false" tokens-consumed-header-name="x-tokens-consumed" remaining-tokens-header-name="x-ratelimit-remaining-tokens" remaining-quota-tokens-header-name="x-ratelimit-remaining-daily-tokens" />
-    <include-fragment fragment-id="foundry02-key-content-safety" />
-    <llm-emit-token-metric namespace="togg-foundry-models">
+    <set-body>@((string)context.Variables["example-foundry-generation-body"])</set-body>
+    <rate-limit-by-key calls='@((string)context.Variables["selected-model"] == "example-kimi-deployment" ? 5000 : 10000)' renewal-period="60" counter-key='@("example-foundry-rpm:" + context.Subscription.Id + ":" + (string)context.Variables["selected-model"])' />
+    <llm-token-limit counter-key='@("example-foundry-tokens:" + context.Subscription.Id)' tokens-per-minute="100000" token-quota="1000000" token-quota-period="Daily" estimate-prompt-tokens="false" tokens-consumed-header-name="x-tokens-consumed" remaining-tokens-header-name="x-ratelimit-remaining-tokens" remaining-quota-tokens-header-name="x-ratelimit-remaining-daily-tokens" />
+    <include-fragment fragment-id="example-foundry-key-content-safety" />
+    <llm-emit-token-metric namespace="example-foundry-models">
       <dimension name="API ID" />
       <dimension name="Subscription ID" />
       <dimension name="Model" value='@((string)context.Variables["selected-model"])' />
     </llm-emit-token-metric>
-    <set-backend-service base-url="https://togg-ai-platform-foundry-02.services.ai.azure.com/openai/v1" />
+    <set-backend-service base-url="https://foundry.example.invalid/openai/v1" />
     <rewrite-uri template="/chat/completions" copy-unmatched-params="false" />
-    <set-body id="generation-body-restore">@((string)context.Variables["foundry02-generation-body"])</set-body>
+    <set-body id="generation-body-restore">@((string)context.Variables["example-foundry-generation-body"])</set-body>
     <set-header name="Authorization" exists-action="delete" />
     <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
     <set-header name="api-key" exists-action="delete" />
-    <set-header name="api-key" exists-action="override"><value>{{deepseek-v4-1-foundry-key}}</value></set-header>
+    <set-header name="api-key" exists-action="override"><value>{{example-foundry-key}}</value></set-header>
     <set-query-parameter name="api-version" exists-action="delete" />
   </inbound>
   <backend>
-    <retry condition='@(context.Response != null &amp;&amp; context.Response.StatusCode == 404 &amp;&amp; (string)context.Variables["selected-model"] == "Kimi-K3.1-Pro")' count="1" interval="1" first-fast-retry="true">
+    <retry condition='@(context.Response != null &amp;&amp; context.Response.StatusCode == 404 &amp;&amp; (string)context.Variables["selected-model"] == "example-kimi-deployment")' count="1" interval="1" first-fast-retry="true">
       <forward-request buffer-response="false" buffer-request-body="true" />
     </retry>
   </backend>
   <outbound>
     <base />
     <set-header name="x-ai-content-safety" exists-action="override">
-      <value>@(!context.Variables.ContainsKey("foundry02-safety-completed") ? "not-checked" : ((bool)context.Variables["foundry02-safety-completed"] ? "passed" : "no-text"))</value>
+      <value>@(!context.Variables.ContainsKey("example-foundry-safety-completed") ? "not-checked" : ((bool)context.Variables["example-foundry-safety-completed"] ? "passed" : "no-text"))</value>
     </set-header>
   </outbound>
   <on-error>

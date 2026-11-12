@@ -36,7 +36,7 @@ locals {
       catalog_name    = "gpt-6-astra"
       version         = "2026-09-03"
       sku_name        = "GlobalStandard"
-      capacity        = 10
+      capacity        = 250
     }
     kimi_k3 = {
       deployment_name = "FW-Kimi-K3"
@@ -44,7 +44,7 @@ locals {
       catalog_name    = "FW-Kimi-K3"
       version         = "1"
       sku_name        = "GlobalStandard"
-      capacity        = 10
+      capacity        = 500
     }
     gpt_chat_latest = {
       deployment_name = "gpt-chat-latest"
@@ -52,7 +52,7 @@ locals {
       catalog_name    = "gpt-chat-latest"
       version         = "2026-10-07"
       sku_name        = "GlobalStandard"
-      capacity        = 10
+      capacity        = 1000
     }
   }
 
@@ -101,7 +101,7 @@ locals {
       catalog_name    = "claude-opus-5-5"
       version         = "2"
       sku_name        = "GlobalStandard"
-      capacity        = 10
+      capacity        = 40
     }
     claude_opus_5_5_fast = {
       deployment_name = "claude-opus-5-5-fast"
@@ -109,7 +109,7 @@ locals {
       catalog_name    = "claude-opus-5-5-fast"
       version         = "2"
       sku_name        = "GlobalStandard"
-      capacity        = 10
+      capacity        = 16
     }
   }
 }

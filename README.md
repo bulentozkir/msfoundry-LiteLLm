@@ -22,20 +22,27 @@ remains in the US.
 
 These seven aliases are deployed and have passed direct gateway inference:
 
-| Gateway alias | Foundry catalog model | Protocol |
-|---|---|---|
-| `FW-DeepSeek-V4.1-Flash` | `DeepSeek-V4-Flash`, version `2026-04-23` | OpenAI chat completions |
-| `FW-Kimi-K3` | `FW-Kimi-K3`, version `1` | OpenAI chat completions |
-| `model-router` | `model-router`, version `2025-11-18` | OpenAI chat completions |
-| `gpt-6-astra` | `gpt-6-astra`, version `2026-09-03` | OpenAI chat completions |
-| `gpt-chat-latest` | `gpt-chat-latest`, version `2026-10-07` (Preview) | OpenAI chat completions and Responses |
-| `claude-opus-5-5` | `claude-opus-5-5`, version `2` | Anthropic Messages |
-| `claude-opus-5-5-fast` | `claude-opus-5-5-fast`, version `2` | Anthropic Messages |
+| Gateway alias | Foundry catalog model | Protocol | Tokens/minute | Requests/minute |
+|---|---|---|---:|---:|
+| `FW-DeepSeek-V4.1-Flash` | `DeepSeek-V4-Flash`, version `2026-04-23` | OpenAI chat completions | 250,000 | 250 |
+| `FW-Kimi-K3` | `FW-Kimi-K3`, version `1` | OpenAI chat completions | 500,000 | 500 |
+| `model-router` | `model-router`, version `2025-11-18` | OpenAI chat completions | 1,000,000 | 1,000 |
+| `gpt-6-astra` | `gpt-6-astra`, version `2026-09-03` | OpenAI chat completions | 250,000 | 250 |
+| `gpt-chat-latest` | `gpt-chat-latest`, version `2026-10-07` (Preview) | OpenAI chat completions and Responses | 1,000,000 | 1,000 |
+| `claude-opus-5-5` | `claude-opus-5-5`, version `2` | Anthropic Messages | 40,000 | 40 |
+| `claude-opus-5-5-fast` | `claude-opus-5-5-fast`, version `2` | Anthropic Messages | 16,000 | 16 |
+
+These are the maximum currently approved allocations, verified on
+November 12, 2026. Each model's corresponding East US 2 quota pool is fully
+allocated; higher throughput requires quota approval. Capacity increases
+retain the existing aliases, endpoints, credentials, and pay-per-token SKUs.
+They do not raise a model's context window or guarantee that a large VS Code
+agent request fits within its per-minute budget.
 
 `gpt-chat-latest` replaces the provisioned-only Qwen candidate. Its Global
-Standard capacity is 10, with 10,000 tokens and 10 requests per minute. At
-verification on November 2, 2026, its regional quota usage was 10 of 1,000
-units, leaving 990 available. Chat Completions and Responses both returned
+Standard capacity is 1,000, with 1,000,000 tokens and 1,000 requests per
+minute, using all 1,000 approved regional quota units. Chat Completions and
+Responses both returned
 nonempty replies through the gateway. This is a Preview model, pinned to
 version `2026-10-07` with `NoAutoUpgrade`; inference is billed by token usage,
 without a provisioned-capacity commitment. No Qwen deployment is configured
@@ -70,10 +77,24 @@ the token rate even when replies are short. On a 429, honor the server's
 retry delay, reduce or compact history, or wait before retrying. Sustained
 larger workloads require a quota increase and a reviewed capacity change.
 
+### Kimi throughput and context
+
+Kimi's Global Standard capacity is 500, with **500,000 tokens and 500 requests
+per minute**, increased from 10,000 TPM and 10 RPM. This uses the full approved
+`AIServices.GlobalStandard.Fireworks` quota in East US 2, verified on
+November 12, 2026; no shared Fireworks quota remains for another deployment.
+It remains pay-per-token, without a provisioned-capacity commitment.
+
+The model's 1,000,000-token context window is separate from this per-minute
+rate budget. VS Code resends history, instructions, and tool definitions, so
+large chats or concurrent requests can still exhaust it. Compact or start a
+new chat when needed, and honor the backend retry delay instead of retrying
+immediately. A higher rate requires an approved Fireworks quota increase.
+
 ### model-router routing
 
-`model-router` runs with capacity 100 (100 requests and 100,000 tokens per
-minute) in `balanced` mode. It is restricted to a routing subset of
+`model-router` runs with capacity 1,000 (1,000 requests and 1,000,000 tokens
+per minute) in `balanced` mode. It is restricted to a routing subset of
 `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.6-terra` and `FW-Kimi-K3`, so it no
 longer routes to GLM, Claude or Phi. The `routing` block is set through the ARM
 API (`2025-10-01-preview`) because the Terraform provider does not manage it;

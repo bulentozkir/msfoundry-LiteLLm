@@ -28,6 +28,7 @@ mock_provider "azapi" {
 
 mock_provider "random" {
   mock_resource "random_string" {
+    override_during = plan
     defaults = {
       result = "test01"
     }
@@ -104,16 +105,71 @@ run "deploys_latest_chat_model_with_standard_quota" {
       azurerm_cognitive_deployment.model["gpt_chat_latest"].model[0].name == "gpt-chat-latest" &&
       azurerm_cognitive_deployment.model["gpt_chat_latest"].model[0].version == "2026-10-07" &&
       azurerm_cognitive_deployment.model["gpt_chat_latest"].sku[0].name == "GlobalStandard" &&
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].sku[0].capacity == 10 &&
+      azurerm_cognitive_deployment.model["gpt_chat_latest"].sku[0].capacity == 1000 &&
       azurerm_cognitive_deployment.model["gpt_chat_latest"].version_upgrade_option == "NoAutoUpgrade" &&
       output.gateway_foundation.models.gpt_chat_latest.deployment_name == "gpt-chat-latest" &&
       output.gateway_foundation.models.gpt_chat_latest.version == "2026-10-07" &&
       output.gateway_foundation.models.gpt_chat_latest.sku_name == "GlobalStandard" &&
-      output.gateway_foundation.models.gpt_chat_latest.capacity == 10 &&
+      output.gateway_foundation.models.gpt_chat_latest.capacity == 1000 &&
       length(output.pending_models) == 0 &&
       length(output.gateway_foundation.models) == 7
     )
     error_message = "Deploy the pinned latest chat model with pay-per-token Standard capacity and expose its exact metadata to the gateway."
+  }
+}
+
+run "deploys_kimi_at_approved_fireworks_maximum" {
+  command = plan
+
+  assert {
+    condition = (
+      azurerm_cognitive_deployment.model["kimi_k3"].name == "FW-Kimi-K3" &&
+      azurerm_cognitive_deployment.model["kimi_k3"].model[0].format == "Fireworks" &&
+      azurerm_cognitive_deployment.model["kimi_k3"].model[0].name == "FW-Kimi-K3" &&
+      azurerm_cognitive_deployment.model["kimi_k3"].model[0].version == "1" &&
+      azurerm_cognitive_deployment.model["kimi_k3"].sku[0].name == "GlobalStandard" &&
+      azurerm_cognitive_deployment.model["kimi_k3"].sku[0].capacity == 500 &&
+      azurerm_cognitive_deployment.model["kimi_k3"].version_upgrade_option == "NoAutoUpgrade" &&
+      output.gateway_foundation.models.kimi_k3.capacity == 500
+    )
+    error_message = "Keep Kimi pinned to its existing pay-per-token deployment and allocate the full approved 500 units of Fireworks quota."
+  }
+}
+
+run "maximizes_approved_standard_capacity_for_all_models" {
+  command = plan
+
+  override_data {
+    target          = data.azapi_resource.model_router_current
+    override_during = plan
+    values = {
+      exists = false
+      output = null
+      tags   = null
+    }
+  }
+
+  assert {
+    condition = (
+      merge(
+        { for key, deployment in azurerm_cognitive_deployment.model : key => deployment.sku[0].capacity },
+        { model_router = azapi_resource.model_router.body.sku.capacity },
+        { for key, deployment in azapi_resource.anthropic : key => deployment.body.sku.capacity },
+        ) == {
+        model_router         = 1000
+        deepseek             = 250
+        gpt6_astra           = 250
+        kimi_k3              = 500
+        gpt_chat_latest      = 1000
+        claude_opus_5_5      = 40
+        claude_opus_5_5_fast = 16
+      } &&
+      output.gateway_foundation.models.gpt6_astra.capacity == 250 &&
+      output.gateway_foundation.models.claude_opus_5_5.capacity == 40 &&
+      output.gateway_foundation.models.claude_opus_5_5_fast.capacity == 16 &&
+      alltrue([for model in output.gateway_foundation.models : model.sku_name == "GlobalStandard"])
+    )
+    error_message = "Allocate each deployed model's full approved quota, expose the matching gateway metadata, and retain pay-per-token GlobalStandard SKUs."
   }
 }
 

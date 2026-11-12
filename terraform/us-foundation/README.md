@@ -37,9 +37,58 @@ terraform -chdir=terraform\us-foundation plan -out=reviewed.tfplan
 The PowerShell check runs the mocked tests and inspects only the router plan
 actions, without printing their test state.
 
-Review the plan, quota, cost, and networking before applying it. After a
-foundation deployment changes, review and apply the separate gateway plan to
-update model registrations.
+Review the plan, quota, cost, and networking before applying it. After adding,
+removing, or changing the identity of a foundation deployment, review and
+apply the separate gateway plan to update model registrations. Capacity-only
+updates do not require new gateway registrations or credential changes.
+
+Apply the reviewed foundation plan with one concurrent operation:
+
+```powershell
+terraform -chdir=terraform\us-foundation apply -parallelism=1 reviewed.tfplan
+```
+
+Azure serializes model updates under the Foundry account. Parallel updates
+can fail with HTTP 409 `RequestConflict` even when their quotas are separate.
+After a partial apply, wait for the account and deployments to finish their
+current operations, generate and review a fresh plan, then apply serially.
+Do not reuse the stale saved plan.
+
+## Maximum approved model capacities
+
+The following `GlobalStandard` allocations use the full approved East US 2
+quota for each deployed model, verified on November 12, 2026:
+
+| Deployment | Capacity units | Tokens/minute | Requests/minute |
+|---|---:|---:|---:|
+| `FW-DeepSeek-V4.1-Flash` | 250 | 250,000 | 250 |
+| `FW-Kimi-K3` | 500 | 500,000 | 500 |
+| `model-router` | 1,000 | 1,000,000 | 1,000 |
+| `gpt-6-astra` | 250 | 250,000 | 250 |
+| `gpt-chat-latest` | 1,000 | 1,000,000 | 1,000 |
+| `claude-opus-5-5` | 40 | 40,000 | 40 |
+| `claude-opus-5-5-fast` | 16 | 16,000 | 16 |
+
+Kimi and DeepSeek were already at their approved maximums. The other five
+deployments increased in place, retaining model versions, routing, gateway
+aliases, credentials, and private networking. This is pay-per-token
+capacity, not a provisioned-throughput purchase. The mocked tests assert all
+seven capacities and their gateway metadata.
+
+Use the catalog SKU's exact `usageName` when checking quota, not an inferred
+model-name match. The router uses `OpenAI.GlobalStandard.ModelRouter`, not
+its separate fine-tuning pool. Kimi consumes the entire shared
+`AIServices.GlobalStandard.Fireworks` quota. Recheck allocations before
+recreating or changing deployments; catalog SKU maximums do not override
+subscription limits, and another deployment can consume a shared pool.
+
+The 1,000,000-token model context window is not a per-minute allowance.
+Long VS Code histories, instructions, tool definitions, and simultaneous
+requests can still exceed the rate budget. Honor the backend's retry delay
+and reduce or compact oversized chats. Claude's approved quotas remain
+40,000 and 16,000 TPM, so large agent requests may still be throttled.
+Higher throughput requires the corresponding model quota increase and
+another reviewed capacity change.
 
 ## Model-router policy and capacity
 
@@ -52,9 +101,9 @@ available. New catalog models are not added automatically. Confirm that any
 replacement model and version are supported by the router and have the
 context capacity required by clients.
 
-The desired `GlobalStandard` capacity is **1,000 units**, targeting
-1,000,000 tokens per minute rather than the current 100,000. Confirm that the
-full 1,000 units are available in the router's regional quota before applying.
+The deployed `GlobalStandard` capacity is **1,000 units**, with
+1,000,000 tokens and 1,000 requests per minute, increased from 100 units.
+All 1,000 units of the router's approved regional quota are allocated.
 Tokens per minute is a shared rate budget, not a guarantee that a
 1,000,000-token input will fit: output reservations, request overhead, other
 traffic, request limits, and smaller model context windows can consume or
@@ -76,22 +125,21 @@ The `moved` block supports transferring the legacy
 `azurerm_cognitive_deployment.model["model_router"]` binding to
 `azapi_resource.model_router`; do not separately import it or run
 `terraform state mv`. The active state binding has already been migrated
-through a refresh-only apply, without changing the live router. Its capacity
-remains 100 with the existing balanced four-model subset; the configured
-increase to 1,000 remains unapplied. Before applying that increase, review a
-refreshed, access-controlled plan: it should report an in-place capacity
-change, not create, delete, or replace the deployment. Stop if other
+through a refresh-only apply. The subsequent capacity increase to 1,000
+preserves the existing balanced four-model subset. Review future changes
+with a refreshed, access-controlled plan: capacity changes should be in
+place, not create, delete, or replace the deployment. Stop if other
 deployment properties would change unexpectedly, and verify the preview API
 and available quota before applying.
 
 ## Standard-quota replacement
 
 `gpt-chat-latest` version `2026-10-07` (Preview) replaces the previously staged
-Qwen candidate. It is deployed with `GlobalStandard` capacity 10 and
+Qwen candidate. It is deployed with `GlobalStandard` capacity 1,000 and
 `NoAutoUpgrade`, using the subscription's existing quota rather than
-provisioned capacity. At verification on November 2, 2026, its East US 2
-quota usage was 10 of 1,000 units. The deployment reports 10,000 tokens and
-10 requests per minute; these rate limits are separate from its context
+provisioned capacity. At verification on November 12, 2026, its East US 2
+quota usage was 1,000 of 1,000 units. The deployment reports 1,000,000 tokens
+and 1,000 requests per minute; these rate limits are separate from its context
 window. Inference is billed by token usage, without a provisioned-capacity
 commitment.
 

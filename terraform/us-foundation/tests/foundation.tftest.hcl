@@ -52,18 +52,15 @@ run "preserves_private_foundry_and_requested_models" {
 
   assert {
     condition = (
-      toset(concat(
-        [for deployment in azurerm_cognitive_deployment.model : deployment.name],
-        [azapi_resource.model_router.name],
-      )) ==
-      toset(["model-router", "FW-DeepSeek-V4.1-Flash", "gpt-6-astra", "FW-Kimi-K3", "gpt-chat-latest"]) &&
+      toset([for deployment in azurerm_cognitive_deployment.model : deployment.name]) ==
+      toset(["FW-DeepSeek-V4.1-Flash", "gpt-6-astra", "FW-Kimi-K3", "Kimi-K3.1-Pro"]) &&
       toset([for deployment in azapi_resource.anthropic : deployment.name]) ==
-      toset(["claude-opus-5-5", "claude-opus-5-5-fast"]) &&
-      !contains(keys(azurerm_cognitive_deployment.model), "qwen") &&
+      toset(["claude-opus-5-5"]) &&
       length(output.pending_models) == 0 &&
-      length(output.gateway_foundation.models) == 7
+      toset([for model in values(output.gateway_foundation.models) : model.deployment_name]) ==
+      toset(["claude-opus-5-5", "FW-DeepSeek-V4.1-Flash", "gpt-6-astra", "FW-Kimi-K3", "Kimi-K3.1-Pro"])
     )
-    error_message = "Deploy the requested available models with the Standard-quota replacement, without Qwen, Phi, GPT mini, GLM, or Claude Fable."
+    error_message = "Keep the five retained Foundry deployments and do not export retired models to the gateway."
   }
 
   assert {
@@ -89,32 +86,9 @@ run "stages_deepseek_without_quota" {
     condition = (
       !contains(keys(azurerm_cognitive_deployment.model), "deepseek") &&
       contains(keys(output.pending_models), "FW-DeepSeek-V4.1-Flash") &&
-      length(output.gateway_foundation.models) == 6
+      length(output.gateway_foundation.models) == 4
     )
     error_message = "Staging DeepSeek must exclude its deployment and advertise the quota dependency."
-  }
-}
-
-run "deploys_latest_chat_model_with_standard_quota" {
-  command = plan
-
-  assert {
-    condition = (
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].name == "gpt-chat-latest" &&
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].model[0].format == "OpenAI" &&
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].model[0].name == "gpt-chat-latest" &&
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].model[0].version == "2026-10-07" &&
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].sku[0].name == "GlobalStandard" &&
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].sku[0].capacity == 1000 &&
-      azurerm_cognitive_deployment.model["gpt_chat_latest"].version_upgrade_option == "NoAutoUpgrade" &&
-      output.gateway_foundation.models.gpt_chat_latest.deployment_name == "gpt-chat-latest" &&
-      output.gateway_foundation.models.gpt_chat_latest.version == "2026-10-07" &&
-      output.gateway_foundation.models.gpt_chat_latest.sku_name == "GlobalStandard" &&
-      output.gateway_foundation.models.gpt_chat_latest.capacity == 1000 &&
-      length(output.pending_models) == 0 &&
-      length(output.gateway_foundation.models) == 7
-    )
-    error_message = "Deploy the pinned latest chat model with pay-per-token Standard capacity and expose its exact metadata to the gateway."
   }
 }
 
@@ -130,46 +104,37 @@ run "deploys_kimi_at_approved_fireworks_maximum" {
       azurerm_cognitive_deployment.model["kimi_k3"].sku[0].name == "GlobalStandard" &&
       azurerm_cognitive_deployment.model["kimi_k3"].sku[0].capacity == 500 &&
       azurerm_cognitive_deployment.model["kimi_k3"].version_upgrade_option == "NoAutoUpgrade" &&
-      output.gateway_foundation.models.kimi_k3.capacity == 500
+      output.gateway_foundation.models.kimi_k3.capacity == 500 &&
+      azurerm_cognitive_deployment.model["kimi_k3_1_pro"].model[0].format == "MoonshotAI" &&
+      azurerm_cognitive_deployment.model["kimi_k3_1_pro"].model[0].version == "2026-11-04" &&
+      azurerm_cognitive_deployment.model["kimi_k3_1_pro"].sku[0].name == "GlobalStandard" &&
+      azurerm_cognitive_deployment.model["kimi_k3_1_pro"].version_upgrade_option == "NoAutoUpgrade" &&
+      output.gateway_foundation.models.kimi_k3_1_pro.deployment_name == "Kimi-K3.1-Pro"
     )
-    error_message = "Keep Kimi pinned to its existing pay-per-token deployment and allocate the full approved 500 units of Fireworks quota."
+    error_message = "Stage the pinned Moonshot model for gateway registration without changing the existing Fireworks deployment."
   }
 }
 
-run "maximizes_approved_standard_capacity_for_all_models" {
+run "preserves_standard_capacity_for_retained_models" {
   command = plan
-
-  override_data {
-    target          = data.azapi_resource.model_router_current
-    override_during = plan
-    values = {
-      exists = false
-      output = null
-      tags   = null
-    }
-  }
 
   assert {
     condition = (
       merge(
         { for key, deployment in azurerm_cognitive_deployment.model : key => deployment.sku[0].capacity },
-        { model_router = azapi_resource.model_router.body.sku.capacity },
         { for key, deployment in azapi_resource.anthropic : key => deployment.body.sku.capacity },
         ) == {
-        model_router         = 1000
-        deepseek             = 250
-        gpt6_astra           = 250
-        kimi_k3              = 500
-        gpt_chat_latest      = 1000
-        claude_opus_5_5      = 40
-        claude_opus_5_5_fast = 16
+        deepseek        = 250
+        gpt6_astra      = 250
+        kimi_k3         = 500
+        kimi_k3_1_pro   = 100
+        claude_opus_5_5 = 40
       } &&
       output.gateway_foundation.models.gpt6_astra.capacity == 250 &&
       output.gateway_foundation.models.claude_opus_5_5.capacity == 40 &&
-      output.gateway_foundation.models.claude_opus_5_5_fast.capacity == 16 &&
       alltrue([for model in output.gateway_foundation.models : model.sku_name == "GlobalStandard"])
     )
-    error_message = "Allocate each deployed model's full approved quota, expose the matching gateway metadata, and retain pay-per-token GlobalStandard SKUs."
+    error_message = "Keep each retained model's capacity, gateway metadata, and pay-per-token GlobalStandard SKU."
   }
 }
 

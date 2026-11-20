@@ -41,40 +41,6 @@ variable "enable_deepseek" {
   default     = true
 }
 
-variable "model_router_routing_models" {
-  description = "Explicit model-router subset; changing it replaces the complete routing list."
-  type = list(object({
-    format  = string
-    name    = string
-    version = string
-  }))
-  default = [
-    { format = "OpenAI", name = "gpt-6-astra", version = "2026-09-03" },
-    { format = "OpenAI", name = "gpt-5.6-sol", version = "2026-07-09" },
-    { format = "OpenAI", name = "gpt-5.6-terra", version = "2026-07-09" },
-    { format = "Fireworks", name = "FW-Kimi-K3", version = "1" },
-  ]
-  nullable = false
-
-  validation {
-    condition = try(
-      length(var.model_router_routing_models) >= 2 &&
-      alltrue([
-        for model in var.model_router_routing_models :
-        trimspace(model.format) != "" && trimspace(model.format) == model.format &&
-        trimspace(model.name) != "" && trimspace(model.name) == model.name &&
-        trimspace(model.version) != "" && trimspace(model.version) == model.version
-      ]) &&
-      length(distinct([
-        for model in var.model_router_routing_models :
-        jsonencode([lower(model.name), model.version])
-      ])) == length(var.model_router_routing_models),
-      false
-    )
-    error_message = "Supply at least two distinct model name/version pairs with nonempty, whitespace-free format, name, and version values."
-  }
-}
-
 variable "project_name" {
   description = "Name of the project recreated from the former Foundry account."
   type        = string

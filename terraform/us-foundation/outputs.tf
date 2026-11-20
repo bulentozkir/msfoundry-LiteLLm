@@ -27,8 +27,7 @@ output "gateway_foundation" {
     foundry_name        = local.foundry_name
     outbound_subnet_id  = azurerm_subnet.ai_gateway_outbound.id
     models = merge(
-      { for key, model in local.azurerm_models : key => merge(model, { deployment_id = azurerm_cognitive_deployment.model[key].id }) },
-      { model_router = merge(local.models.model_router, { deployment_id = azapi_resource.model_router.id }) },
+      { for key, model in local.models : key => merge(model, { deployment_id = azurerm_cognitive_deployment.model[key].id }) },
       { for key, model in local.anthropic_models : key => merge(model, { deployment_id = azapi_resource.anthropic[key].id }) }
     )
   }

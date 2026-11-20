@@ -14,14 +14,6 @@ locals {
   fireworks_feature_id = "/subscriptions/${var.subscription_id}/providers/Microsoft.Features/providers/Microsoft.CognitiveServices/features/Fireworks.EnableDeploy"
 
   requested_models = {
-    model_router = {
-      deployment_name = "model-router"
-      format          = "OpenAI"
-      catalog_name    = "model-router"
-      version         = "2025-11-18"
-      sku_name        = "GlobalStandard"
-      capacity        = 1000
-    }
     deepseek = {
       deployment_name = "FW-DeepSeek-V4.1-Flash"
       format          = "DeepSeek"
@@ -46,13 +38,13 @@ locals {
       sku_name        = "GlobalStandard"
       capacity        = 500
     }
-    gpt_chat_latest = {
-      deployment_name = "gpt-chat-latest"
-      format          = "OpenAI"
-      catalog_name    = "gpt-chat-latest"
-      version         = "2026-10-07"
+    kimi_k3_1_pro = {
+      deployment_name = "Kimi-K3.1-Pro"
+      format          = "MoonshotAI"
+      catalog_name    = "Kimi-K3.1-Pro"
+      version         = "2026-11-04"
       sku_name        = "GlobalStandard"
-      capacity        = 1000
+      capacity        = 100
     }
   }
 
@@ -60,39 +52,6 @@ locals {
     for key, model in local.requested_models : key => model
     if key != "deepseek" || var.enable_deepseek
   }
-
-  azurerm_models = {
-    for key, model in local.models : key => model
-    if key != "model_router"
-  }
-
-  model_router_preserved_properties = try({
-    for key, value in data.azapi_resource.model_router_current.output.properties : key => value
-    if contains([
-      "capacitySettings",
-      "currentCapacity",
-      "deploymentState",
-      "parentDeploymentName",
-      "raiPolicyName",
-      "serviceTier",
-      "spilloverDeploymentName",
-    ], key) && value != null
-  }, {})
-
-  model_router_preserved_scale_settings = try({
-    for key, value in data.azapi_resource.model_router_current.output.properties.scaleSettings : key => value
-    if contains(["capacity", "scaleType"], key) && value != null
-  }, {})
-
-  model_router_preserved_model = try({
-    for key, value in data.azapi_resource.model_router_current.output.properties.model : key => value
-    if contains(["publisher", "source", "sourceAccount"], key) && value != null
-  }, {})
-
-  model_router_preserved_sku = try({
-    for key, value in data.azapi_resource.model_router_current.output.sku : key => value
-    if contains(["family", "size", "tier"], key) && value != null
-  }, {})
 
   anthropic_models = {
     claude_opus_5_5 = {
@@ -102,14 +61,6 @@ locals {
       version         = "2"
       sku_name        = "GlobalStandard"
       capacity        = 40
-    }
-    claude_opus_5_5_fast = {
-      deployment_name = "claude-opus-5-5-fast"
-      format          = "Anthropic"
-      catalog_name    = "claude-opus-5-5-fast"
-      version         = "2"
-      sku_name        = "GlobalStandard"
-      capacity        = 16
     }
   }
 }
@@ -182,7 +133,7 @@ data "azapi_resource" "fireworks_feature" {
 }
 
 resource "azurerm_cognitive_deployment" "model" {
-  for_each = local.azurerm_models
+  for_each = local.models
 
   name                   = each.value.deployment_name
   cognitive_account_id   = azapi_resource.foundry.id
@@ -204,57 +155,6 @@ resource "azurerm_cognitive_deployment" "model" {
       condition     = each.value.format != "Fireworks" || data.azapi_resource.fireworks_feature.output.properties.state == "Registered"
       error_message = "Fireworks.EnableDeploy must be Registered before deploying Fireworks models."
     }
-  }
-}
-
-data "azapi_resource" "model_router_current" {
-  type                   = "Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview"
-  name                   = local.models.model_router.deployment_name
-  parent_id              = "${data.azurerm_resource_group.main.id}/providers/Microsoft.CognitiveServices/accounts/${local.foundry_name}"
-  ignore_not_found       = true
-  response_export_values = ["properties", "sku"]
-}
-
-moved {
-  from = azurerm_cognitive_deployment.model["model_router"]
-  to   = azapi_resource.model_router
-}
-
-resource "azapi_resource" "model_router" {
-  type      = "Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview"
-  name      = local.models.model_router.deployment_name
-  parent_id = azapi_resource.foundry.id
-  tags      = data.azapi_resource.model_router_current.tags
-
-  body = {
-    sku = merge(local.model_router_preserved_sku, {
-      name     = local.models.model_router.sku_name
-      capacity = local.models.model_router.capacity
-    })
-    properties = merge(
-      local.model_router_preserved_properties,
-      {
-        for key, value in { scaleSettings = local.model_router_preserved_scale_settings } : key => value
-        if length(value) > 0
-      },
-      {
-        model = merge(local.model_router_preserved_model, {
-          format  = local.models.model_router.format
-          name    = local.models.model_router.catalog_name
-          version = local.models.model_router.version
-        })
-        versionUpgradeOption = "NoAutoUpgrade"
-        routing = {
-          mode   = "balanced"
-          models = var.model_router_routing_models
-        }
-      }
-    )
-  }
-
-  ignore_missing_property = false
-  list_unique_id_property = {
-    "properties.routing.models" = "name,version"
   }
 }
 

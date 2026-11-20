@@ -1,5 +1,115 @@
 # APIM AI Gateway and three Foundry deployments
 
+## East US 2 model retirement - 2026-11-20
+
+Status: Deployed
+
+- At the user's explicit request, remove only `model-router`, `gpt-chat-latest`
+  and `claude-opus-5-5-fast` from `aigw-us-c2yj6j` and `fdry-aigw-us-c2yj6j`
+  in East US 2 (`rg-foundry-aigateway`, `fb7dfa70-78b9-4e56-8d2d-fa2eff765241`).
+- Delete the three gateway aliases before their three model registrations.
+  Then delete the three Foundry deployments from the original foundation
+  state and refresh the local VS Code Entra provider list.
+- Require Terraform formatting, validation and focused tests, inspection of
+  every delete-only saved plan, and a live post-check for both deleted and
+  retained targets. Do not change any shared gateway, key, networking, role,
+  project, or non-targeted deployment. No application build is involved.
+
+### Section 7: Validation Proof - East US 2 retirement
+
+- On November 20, 2026, the Azure inventory confirmed all three names in
+  both resources, no alias shared their registrations, and no retained
+  deployment declared a dependency on the retiring deployments.
+- Terraform `fmt -check -recursive`, `validate`, and the six focused
+  foundation tests passed. The full foundation plan contains exactly three
+  deletes, and its after-state publishes the five expected remaining
+  deployments. No build, networking, or role change applies.
+- Reviewed foundation plan SHA256:
+  `8E0901B915496CB61FE5D8150A1F5E6AE2EE705296BEA81CC2BF7CFE6231C626`.
+- The isolated gateway retirement root passed initialization and validation
+  and imported exactly the six named Azure child resources using read-only
+  operations. The first plan contains only the three alias deletes.
+- Reviewed gateway alias plan SHA256:
+  `D8474B0DCEBBE76E70BF42E15DA7611B5F3B0818407104EF825B2D1144A2E35C`.
+  The apply deleted three aliases and changed nothing else. The five
+  retained aliases were verified before planning the registration deletes.
+- Reviewed gateway registration plan SHA256:
+  `24D1920FC1AB5F0FA730923340F6CFEBC9E70EBA43DEB246DFB59F6F596175C3`.
+  This plan deletes only the three registrations after their aliases are gone.
+- The registration and foundation applies each deleted exactly three
+  resources, with no creates or updates. Azure and the foundation output
+  both show the five retained models. The gateway and project report
+  `Succeeded`.
+- All five retained gateway aliases returned text, including the four
+  models in the updated local VS Code provider. Each retired route
+  returned HTTP 404.
+
+---
+
+## East US 2 dedicated AI Gateway model cutover - 2026-11-20
+
+Status: Deployed
+
+The Kimi cutover is live. GPT-6.2 Astra is blocked by availability in the
+specified Foundry account. The existing GPT-6 Astra and legacy Kimi cloud
+resources were not retired.
+
+- Standalone Terraform roots: `terraform/us-foundation` and `terraform/us-ai-gateway`.
+- Target: `rg-foundry-aigateway`, `fdry-aigw-us-c2yj6j`, project
+  `ai-project-8f17c2a9`, and `aigw-us-c2yj6j` in the subscription from the
+  requested gateway link (`fb7dfa70-78b9-4e56-8d2d-fa2eff765241`), East US 2.
+- Stage `Kimi-K3.1-Pro` version `2026-11-04` at 100 Global Standard units,
+  add its gateway registration and alias, and verify Entra-authenticated
+  inference before changing the local VS Code model picker. Keep existing
+  models, router policy, aliases, gateway identity, credentials and networking
+  intact during the staged cutover. The requested `gpt-6.2-astra` is not
+  listed in the target account or regional capacity response.
+- All validation checks must pass: initialize the pinned providers, check
+  formatting and configuration, run focused model tests, verify the state
+  matches the live resource IDs, and inspect each refreshed saved plan.
+  Permit only the intended model and alias additions. No application runtime
+  or RBAC changes are in scope.
+
+### Section 7: Validation Proof - East US 2 cutover
+
+Foundation phase, November 20, 2026:
+
+- Confirmed the live US Foundry account and its existing ignored state snapshot.
+  The regional usage and capacity checks both show 100 available Kimi K3.1 Pro
+  Global Standard units. The documented GPT-6.2 Astra version is absent from
+  both the account catalog and capacity results.
+- Terraform 1.15.8 initialized the pinned providers; `fmt -check -recursive`
+  and `validate` passed. `terraform test` passed 20 foundation/router tests
+  using Windows path selectors. No application build or role change applies.
+- The full plan also contained router provider metadata drift with no change
+  to the routing body. The targeted saved plan excludes the router and plans
+  exactly one create, `azurerm_cognitive_deployment.model["kimi_k3_1_pro"]`,
+  with no updates, deletes, networking, or role changes.
+- Reviewed plan SHA256:
+  `84A7C535D97DCA950F683E0298552864D739A4AE10ABE278224280FBC0C6C6BE`.
+  The serial Terraform apply added one deployment and changed or destroyed none.
+- The original gateway state is absent from this checkout. The isolated
+  gateway cutover Terraform configuration reads the existing Foundry provider
+  and deployment rather than recreating the gateway or adopting other
+  resources. Its `init`, `fmt -check`, and `validate` passed. The refreshed
+  plan checks the exact Foundry account and deployment, both advertised
+  endpoints, and only two creates: the Kimi model registration and its alias.
+- Reviewed gateway plan SHA256:
+  `F754DFF738A007543FEA1982C9F2FD3609F3E34E9F9D74FD8753E96865B14692`.
+  No gateway resource, key, networking, or RBAC changes are planned.
+- The gateway Terraform apply added the expected two children and changed or
+  destroyed none. Foundry reports `Succeeded`, the alias points to the exact
+  Kimi registration, and the original Foundry User role is still present.
+  Chat Completions and Responses both returned HTTP 200 and text.
+- Foundation state was restored to its ignored local path and refreshed
+  without cloud writes so it exports the new model. The isolated gateway
+  state must be reconciled with the original gateway root before a full apply.
+- All 19 dedicated gateway Terraform tests passed. The local VS Code
+  Entra provider now uses Kimi K3.1 Pro instead of the legacy alias, and
+  its actual runtime returned text from both Kimi K3.1 Pro and GPT-6 Astra.
+
+---
+
 Status: Deployed
 
 ## Stage 10: reversible AI Gateway test-tier replacement - 2026-10-20

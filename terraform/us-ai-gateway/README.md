@@ -46,20 +46,28 @@ reviewed `model_endpoint_overrides` entry when appropriate. The root also
 rejects colliding normalized resource names and the explicitly excluded Fable,
 Phi, GPT mini and GLM models.
 
-The live gateway registers `model-router`, `gpt-6-astra`, `FW-Kimi-K3`,
-`FW-DeepSeek-V4.1-Flash`, `gpt-chat-latest`, `claude-opus-5-5`, and
-`claude-opus-5-5-fast`. Direct inference succeeded for all seven.
-`gpt-chat-latest` version `2026-10-07` is the Preview, Standard-quota
-replacement for the provisioned-only Qwen candidate. Its discovered Chat
-Completions and Responses endpoints both returned nonempty replies, and an
-existing Kimi alias was also retested successfully. The existing gateway,
-runtime key, identity, network, and other registrations were not changed.
+The live gateway registers `gpt-6-astra`, `FW-Kimi-K3`, `Kimi-K3.1-Pro`,
+`FW-DeepSeek-V4.1-Flash`, and `claude-opus-5-5`. Both Kimi K3.1 Pro endpoints
+were verified using Microsoft Entra ID. The previous Kimi alias is still
+available. The `model-router`, `gpt-chat-latest`, and `claude-opus-5-5-fast`
+aliases and registrations were retired without changing the gateway,
+runtime key, identity, networking, or the remaining registrations.
 
 This root does not deploy models. After a new model is actually deployed by
 the foundation and appears in its output, this root plans its registration
 and alias on the next apply. Review its discovered endpoint capabilities and
 any required override. Removing a deployment from that output plans the
 removal of its gateway registration and alias.
+
+The Kimi K3.1 Pro alias and registration were created with a scoped
+Terraform state because the original dedicated gateway state was absent
+from the checkout. Before applying this root again, recover its original
+state and reconcile the existing `kimi-k3-1-pro` children at
+`azapi_resource.gateway_model["kimi_k3_1_pro"]` and
+`azapi_resource.model_alias["kimi_k3_1_pro"]`. Do not apply this root with
+empty state or attempt to recreate the gateway.
+The retired children have also been deleted from Azure; refresh any recovered
+gateway state before applying so it does not carry stale bindings.
 
 Mock tests verify request construction, not a live deployment or successful
 inference. The gateway's backend subnet and Foundry private endpoint must

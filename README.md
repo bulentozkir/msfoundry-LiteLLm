@@ -20,33 +20,23 @@ remains in the US.
 
 ## Models and endpoints
 
-These seven aliases are deployed and have passed direct gateway inference:
+These aliases are deployed and have passed direct gateway inference:
 
 | Gateway alias | Foundry catalog model | Protocol | Tokens/minute | Requests/minute |
 |---|---|---|---:|---:|
 | `FW-DeepSeek-V4.1-Flash` | `DeepSeek-V4-Flash`, version `2026-04-23` | OpenAI chat completions | 250,000 | 250 |
 | `FW-Kimi-K3` | `FW-Kimi-K3`, version `1` | OpenAI chat completions | 500,000 | 500 |
-| `model-router` | `model-router`, version `2025-11-18` | OpenAI chat completions | 1,000,000 | 1,000 |
+| `Kimi-K3.1-Pro` | `Kimi-K3.1-Pro`, version `2026-11-04` | OpenAI chat completions and Responses | 100,000 | 100 |
 | `gpt-6-astra` | `gpt-6-astra`, version `2026-09-03` | OpenAI chat completions | 250,000 | 250 |
-| `gpt-chat-latest` | `gpt-chat-latest`, version `2026-10-07` (Preview) | OpenAI chat completions and Responses | 1,000,000 | 1,000 |
 | `claude-opus-5-5` | `claude-opus-5-5`, version `2` | Anthropic Messages | 40,000 | 40 |
-| `claude-opus-5-5-fast` | `claude-opus-5-5-fast`, version `2` | Anthropic Messages | 16,000 | 16 |
 
-These are the maximum currently approved allocations, verified on
-November 12, 2026. Each model's corresponding East US 2 quota pool is fully
-allocated; higher throughput requires quota approval. Capacity increases
-retain the existing aliases, endpoints, credentials, and pay-per-token SKUs.
-They do not raise a model's context window or guarantee that a large VS Code
-agent request fits within its per-minute budget.
+These are deployed allocations. `Kimi-K3.1-Pro` uses all 100 units of its
+approved East US 2 quota as verified on November 20, 2026. Capacity increases
+do not raise a model's context window or guarantee that a large VS Code agent
+request fits within its per-minute budget.
 
-`gpt-chat-latest` replaces the provisioned-only Qwen candidate. Its Global
-Standard capacity is 1,000, with 1,000,000 tokens and 1,000 requests per
-minute, using all 1,000 approved regional quota units. Chat Completions and
-Responses both returned
-nonempty replies through the gateway. This is a Preview model, pinned to
-version `2026-10-07` with `NoAutoUpgrade`; inference is billed by token usage,
-without a provisioned-capacity commitment. No Qwen deployment is configured
-or active. Claude Fable, Phi, GPT mini, and GLM are not deployed.
+`model-router`, `gpt-chat-latest`, and `claude-opus-5-5-fast` were retired
+from both the East US 2 Foundry account and its dedicated gateway.
 
 Use the gateway hostname returned by Azure or the gateway Terraform output,
 not a hostname inferred from the resource name. The current operation URLs
@@ -61,9 +51,7 @@ https://aigw-us-c2-jcr733hpvms4w.eastus2-01.ai.gateway.azure.com/default/models/
 Send a gateway runtime key as `Authorization: Bearer <key>`. Claude requests
 also require `anthropic-version: 2023-06-01`. These are gateway credentials,
 not Foundry keys or APIM subscription keys. Store them in an approved secret
-store and never commit or print them. For `model-router`, allow enough
-completion tokens for reasoning as well as visible output; a 128-token
-budget can be exhausted before a visible answer.
+store and never commit or print them.
 
 ### DeepSeek throughput and context
 
@@ -79,7 +67,13 @@ larger workloads require a quota increase and a reviewed capacity change.
 
 ### Kimi throughput and context
 
-Kimi's Global Standard capacity is 500, with **500,000 tokens and 500 requests
+The local VS Code **AI Gateway (Entra ID)** provider now selects
+`Kimi-K3.1-Pro`. Its 100 units use the model-specific Moonshot quota, not the
+shared Fireworks pool. The previous Azure alias remains available as a
+fallback. `gpt-6-astra` remains the Astra entry because the target Foundry
+account does not yet list `gpt-6.2-astra`.
+
+The legacy Fireworks Kimi Global Standard capacity is 500, with **500,000 tokens and 500 requests
 per minute**, increased from 10,000 TPM and 10 RPM. This uses the full approved
 `AIServices.GlobalStandard.Fireworks` quota in East US 2, verified on
 November 12, 2026; no shared Fireworks quota remains for another deployment.
@@ -91,24 +85,13 @@ large chats or concurrent requests can still exhaust it. Compact or start a
 new chat when needed, and honor the backend retry delay instead of retrying
 immediately. A higher rate requires an approved Fireworks quota increase.
 
-### model-router routing
-
-`model-router` runs with capacity 1,000 (1,000 requests and 1,000,000 tokens
-per minute) in `balanced` mode. It is restricted to a routing subset of
-`gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.6-terra` and `FW-Kimi-K3`, so it no
-longer routes to GLM, Claude or Phi. The `routing` block is set through the ARM
-API (`2025-10-01-preview`) because the Terraform provider does not manage it;
-re-apply it if the deployment is recreated. A 1M context window is not
-guaranteed because the router's limit is that of its smallest routed model.
-
 ## VS Code
 
-The **AI Gateway** Custom Endpoint model group uses the aliases and endpoint
-protocols above. The original six aliases have returned nonempty responses
-through VS Code's `vscode.lm` API. The new `gpt-chat-latest` alias has been
-verified through the gateway; add it to the Custom Endpoint model list with
-the Chat Completions URL to make it selectable in VS Code. Keep the existing
-gateway runtime key in VS Code's secure API-key input, and configure the
+The local **AI Gateway (Entra ID)** provider offers `claude-opus-5-5`,
+`FW-DeepSeek-V4.1-Flash`, `Kimi-K3.1-Pro`, and `gpt-6-astra`. Run
+**Developer: Reload Window** after a provider update to refresh the picker.
+For a separate Custom Endpoint model group, keep the gateway runtime key
+in VS Code's secure API-key input and configure the
 model-level request header with the secure input reference:
 
 ```json

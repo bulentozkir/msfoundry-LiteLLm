@@ -105,6 +105,12 @@ requests are honored up to the model's ceiling. Requests without an output
 override use that ceiling; large requests can cost more and still hit HTTP 429
 under the unchanged Azure TPM/RPM allocations.
 
+The provider preserves VS Code system messages (role `3`) for both Chat
+Completions and native Claude Messages requests. An
+`Unsupported chat message role: 3` error comes from an older local provider,
+before Azure inference. Update the provider and restart VS Code; changing
+model quotas or Azure configuration does not address that error.
+
 Fully close your VS Code windows and reopen after a provider update. The shared
 Copilot agent host can retain an older window's model metadata, so reloading
 only one window might not refresh the limits.

@@ -56,10 +56,11 @@ store and never commit or print them.
 ### DeepSeek throughput and context
 
 The DeepSeek deployment currently has Global Standard capacity 250, with
-250,000 tokens and 250 requests per minute. Its published model limits are a
-1,000,000-token context window and 384,000 output tokens; these are distinct
-from the per-minute quota. See the
-[DeepSeek model specifications](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure#deepseek).
+250,000 tokens and 250 requests per minute. The deployed `DeepSeek-V4-Flash`
+version `2026-04-23` lists a 1,000,000-token context window and 128,000 output
+tokens in its [Azure catalog entry](https://ai.azure.com/catalog/models/DeepSeek-V4-Flash);
+these are distinct from the per-minute quota. The gateway alias
+`FW-DeepSeek-V4.1-Flash` does not change the underlying model version or limits.
 Long histories and tool definitions are resent on each turn and can exhaust
 the token rate even when replies are short. On a 429, honor the server's
 retry delay, reduce or compact history, or wait before retrying. Sustained
@@ -88,8 +89,25 @@ immediately. A higher rate requires an approved Fireworks quota increase.
 ## VS Code
 
 The local **AI Gateway (Entra ID)** provider offers `claude-opus-5-5`,
-`FW-DeepSeek-V4.1-Flash`, `Kimi-K3.1-Pro`, and `gpt-6-astra`. Run
-**Developer: Reload Window** after a provider update to refresh the picker.
+`FW-DeepSeek-V4.1-Flash`, and `Kimi-K3.1-Pro`, with these maximum token limits:
+
+| Model | Maximum context/input tokens | Maximum output tokens |
+|---|---:|---:|
+| [claude-opus-5-5](https://ai.azure.com/catalog/models/claude-opus-5-5), version `2` | 1,000,000 | 128,000 |
+| `FW-DeepSeek-V4.1-Flash` (deployed `DeepSeek-V4-Flash`) | 1,000,000 | 128,000 |
+| [Kimi-K3.1-Pro](https://ai.azure.com/catalog/models/Kimi-K3.1-Pro), version `2026-11-04` | 1,048,576 | 262,144 |
+
+Input and output share each model's context window; these are not additive
+allowances or per-minute quotas. The provider advertises an explicit shared
+window instead of the former 65,536-input/8,192-output cap, which could reject
+static instructions and tool definitions before inference. SDK output-token
+requests are honored up to the model's ceiling. Requests without an output
+override use that ceiling; large requests can cost more and still hit HTTP 429
+under the unchanged Azure TPM/RPM allocations.
+
+Fully close your VS Code windows and reopen after a provider update. The shared
+Copilot agent host can retain an older window's model metadata, so reloading
+only one window might not refresh the limits.
 For a separate Custom Endpoint model group, keep the gateway runtime key
 in VS Code's secure API-key input and configure the
 model-level request header with the secure input reference:

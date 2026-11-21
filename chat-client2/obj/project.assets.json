@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client2\\ChatClient2.csproj",
+      "projectUniqueName": "C:\\GitHub\\msfoundry-LiteLLm\\chat-client2\\ChatClient2.csproj",
       "projectName": "ChatClient2",
-      "projectPath": "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client2\\ChatClient2.csproj",
+      "projectPath": "C:\\GitHub\\msfoundry-LiteLLm\\chat-client2\\ChatClient2.csproj",
       "packagesPath": "C:\\Users\\bulento\\.nuget\\packages\\",
-      "outputPath": "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client2\\obj\\",
+      "outputPath": "C:\\GitHub\\msfoundry-LiteLLm\\chat-client2\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\bulento\\AppData\\Roaming\\NuGet\\NuGet.Config"

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj": {}
+    "C:\\GitHub\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj": {}
   },
   "projects": {
-    "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj": {
+    "C:\\GitHub\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj",
+        "projectUniqueName": "C:\\GitHub\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj",
         "projectName": "ChatClientLiteLLM",
-        "projectPath": "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj",
+        "projectPath": "C:\\GitHub\\msfoundry-LiteLLm\\chat-client-litellm\\ChatClientLiteLLM.csproj",
         "packagesPath": "C:\\Users\\bulento\\.nuget\\packages\\",
-        "outputPath": "C:\\gitrepo\\msfoundry-LiteLLm\\chat-client-litellm\\obj\\",
+        "outputPath": "C:\\GitHub\\msfoundry-LiteLLm\\chat-client-litellm\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\bulento\\AppData\\Roaming\\NuGet\\NuGet.Config"

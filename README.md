@@ -71,8 +71,8 @@ larger workloads require a quota increase and a reviewed capacity change.
 The local VS Code **AI Gateway (Entra ID)** provider now selects
 `Kimi-K3.1-Pro`. Its 100 units use the model-specific Moonshot quota, not the
 shared Fireworks pool. The previous Azure alias remains available as a
-fallback. `gpt-6-astra` remains the Astra entry because the target Foundry
-account does not yet list `gpt-6.2-astra`.
+fallback. The provider also exposes `gpt-6.2-astra` through the separately
+added `bulento-3340-resource/gpt-6-2-astra` gateway alias.
 
 The legacy Fireworks Kimi Global Standard capacity is 500, with **500,000 tokens and 500 requests
 per minute**, increased from 10,000 TPM and 10 RPM. This uses the full approved
@@ -89,13 +89,23 @@ immediately. A higher rate requires an approved Fireworks quota increase.
 ## VS Code
 
 The local **AI Gateway (Entra ID)** provider offers `claude-opus-5-5`,
-`FW-DeepSeek-V4.1-Flash`, and `Kimi-K3.1-Pro`, with these maximum token limits:
+`FW-DeepSeek-V4.1-Flash`, `Kimi-K3.1-Pro`, and `gpt-6.2-astra`, with these
+maximum token limits:
 
-| Model | Maximum context/input tokens | Maximum output tokens |
-|---|---:|---:|
-| [claude-opus-5-5](https://ai.azure.com/catalog/models/claude-opus-5-5), version `2` | 1,000,000 | 128,000 |
-| `FW-DeepSeek-V4.1-Flash` (deployed `DeepSeek-V4-Flash`) | 1,000,000 | 128,000 |
-| [Kimi-K3.1-Pro](https://ai.azure.com/catalog/models/Kimi-K3.1-Pro), version `2026-11-04` | 1,048,576 | 262,144 |
+| Model | Maximum context tokens | Maximum input tokens | Maximum output tokens |
+|---|---:|---:|---:|
+| [claude-opus-5-5](https://ai.azure.com/catalog/models/claude-opus-5-5), version `2` | 1,000,000 | 1,000,000 | 128,000 |
+| `FW-DeepSeek-V4.1-Flash` (deployed `DeepSeek-V4-Flash`) | 1,000,000 | 1,000,000 | 128,000 |
+| [Kimi-K3.1-Pro](https://ai.azure.com/catalog/models/Kimi-K3.1-Pro), version `2026-11-04` | 1,048,576 | 1,048,576 | 262,144 |
+| [gpt-6.2-astra](https://ai.azure.com/catalog/models/gpt-6.2-astra), version `2026-11-17` | 1,050,000 | 922,000 | 128,000 |
+
+Astra's separate input limit is documented in the
+[OpenAI model reference](https://developers.openai.com/api/docs/models/gpt-6.2-astra).
+Select **gpt-6.2-astra** under **AI Gateway (Entra ID)**. It uses the native
+Responses API because this deployment's Chat Completions API rejects tool
+requests with reasoning and also rejects the suggested `none` setting.
+Responses requests are stateless (`store: false`); encrypted reasoning items
+are retained with tool history to support subsequent tool-result requests.
 
 Input and output share each model's context window; these are not additive
 allowances or per-minute quotas. The provider advertises an explicit shared
